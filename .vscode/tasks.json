@@ -1,0 +1,226 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Typecheck employee login",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$nodeDir=Join-Path $env:LOCALAPPDATA 'Microsoft\\WinGet\\Packages\\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe\\node-v24.20.0-win-x64'; $env:PATH=\"$nodeDir;$env:PATH\"; & (Join-Path $nodeDir 'npm.cmd') run typecheck"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Lint employee login",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$nodeDir=Join-Path $env:LOCALAPPDATA 'Microsoft\\WinGet\\Packages\\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe\\node-v24.20.0-win-x64'; $env:PATH=\"$nodeDir;$env:PATH\"; & (Join-Path $nodeDir 'npm.cmd') run lint"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Recheck employee login types",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$nodeDir=Join-Path $env:LOCALAPPDATA 'Microsoft\\WinGet\\Packages\\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe\\node-v24.20.0-win-x64'; $env:PATH=\"$nodeDir;$env:PATH\"; & (Join-Path $nodeDir 'npm.cmd') run typecheck"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Validate DISC login and production build",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$nodeDir=Join-Path $env:LOCALAPPDATA 'Microsoft\\WinGet\\Packages\\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe\\node-v24.20.0-win-x64'; $env:PATH=\"$nodeDir;$env:PATH\"; & (Join-Path $nodeDir 'npm.cmd') run lint; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; & (Join-Path $nodeDir 'npm.cmd') run build; exit $LASTEXITCODE"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Inspect Next dev CSS asset",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Get-NetTCPConnection -LocalPort 3000 -State Listen | Select-Object -ExpandProperty OwningProcess; Get-ChildItem .next\\static\\css -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name; Get-Content package.json | Select-String '\"dev\"|\"build\"'"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Inspect Next dev listener and CSS",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Get-NetTCPConnection -LocalPort 3000 -State Listen | Format-Table LocalAddress,LocalPort,OwningProcess; Get-ChildItem .next\\static\\css -ErrorAction SilentlyContinue | Format-Table Name,Length"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Identify development server process",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Get-CimInstance Win32_Process -Filter 'ProcessId = 2524' | Format-List ProcessId,ParentProcessId,CommandLine; Get-ChildItem .next\\static\\css\\app -Recurse -ErrorAction SilentlyContinue | Format-Table FullName,Length"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Identify Next listener process",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Get-Process -Id 2524 | Format-List Id,ProcessName,Path; Get-ChildItem .next\\static\\css\\app -Recurse -ErrorAction SilentlyContinue | Format-Table FullName,Length"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Restart DISC development server",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$nodeDir=Join-Path $env:LOCALAPPDATA 'Microsoft\\WinGet\\Packages\\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe\\node-v24.20.0-win-x64'; $env:PATH=\"$nodeDir;$env:PATH\"; Stop-Process -Id 2524 -Force; & (Join-Path $nodeDir 'npm.cmd') run dev -- --hostname 127.0.0.1 --port 3000"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Start DISC development server",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$nodeDir=Join-Path $env:LOCALAPPDATA 'Microsoft\\WinGet\\Packages\\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe\\node-v24.20.0-win-x64'; $env:PATH=\"$nodeDir;$env:PATH\"; & (Join-Path $nodeDir 'npm.cmd') run dev -- --hostname 127.0.0.1 --port 3000"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Verify DISC server response",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Get-NetTCPConnection -LocalPort 3000 -State Listen | Format-Table LocalAddress,LocalPort,OwningProcess; Invoke-WebRequest http://127.0.0.1:3000/login -UseBasicParsing | Select-Object StatusCode"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Check PostgreSQL validation tools",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"Get-Command psql,supabase,docker -ErrorAction SilentlyContinue | Format-Table Name,Source"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Build consolidated Supabase SQL",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-Command",
+				"$files = @(\"supabase/migrations/001_disc_schema.sql\", \"supabase/migrations/002_roles_and_teams.sql\", \"supabase/migrations/003_questionnaires_campaigns.sql\", \"supabase/migrations/004_domain_operations.sql\", \"supabase/seed.sql\"); $builder = [System.Text.StringBuilder]::new(); [void]$builder.AppendLine(\"-- People Insights: complete Supabase setup for a new project.\"); [void]$builder.AppendLine(\"-- Run once in Supabase SQL Editor. Includes the initial DISC questionnaire and campaign seed.\"); [void]$builder.AppendLine(\"-- Do not run on a database where these migrations have already been applied.\"); foreach ($file in $files) { [void]$builder.AppendLine(); [void]$builder.AppendLine(\"-- ===== $file =====\"); [void]$builder.AppendLine(); [void]$builder.Append([System.IO.File]::ReadAllText((Join-Path $PWD $file))); [void]$builder.AppendLine(); }; [System.IO.File]::WriteAllText((Join-Path $PWD \"supabase/setup.sql\"), $builder.ToString(), [System.Text.UTF8Encoding]::new($false)); Get-Item supabase/setup.sql | Format-Table Name,Length"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Concatenate Supabase setup SQL",
+			"type": "shell",
+			"command": "cmd.exe",
+			"args": [
+				"/c",
+				"copy /b supabase\\setup-header.sql+supabase\\migrations\\001_disc_schema.sql+supabase\\migrations\\002_roles_and_teams.sql+supabase\\migrations\\003_questionnaires_campaigns.sql+supabase\\migrations\\004_domain_operations.sql+supabase\\seed.sql supabase\\setup.sql"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Rebuild consolidated SQL from sources",
+			"type": "shell",
+			"command": "cmd.exe",
+			"args": [
+				"/c",
+				"copy /b /y supabase\\migrations\\001_disc_schema.sql+supabase\\migrations\\002_roles_and_teams.sql+supabase\\migrations\\003_questionnaires_campaigns.sql+supabase\\migrations\\004_domain_operations.sql+supabase\\seed.sql supabase\\setup.sql"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Generate Supabase setup from migrations",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-File",
+				"supabase\\_build-setup.ps1"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "Generate Supabase setup with policy bypass",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"supabase\\_build-setup.ps1"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		}
+	]
+}

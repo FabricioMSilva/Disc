@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+build
+.env*
+!.env.example
+/data/private/funcionarios.json
+next-env.d.ts
+npm-debug.log*
