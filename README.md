@@ -11,7 +11,7 @@ Plataforma interna de avaliação DISC e competências, com gestão de campanhas
 ## Configuração
 
 1. Crie um projeto Supabase e habilite autenticação por e-mail/senha.
-2. Copie `.env.example` para `.env.local` e preencha `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` com os valores do projeto.
+2. Copie `.env.example` para `.env.local` e preencha `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` com os valores do projeto. `NEXT_PUBLIC_SUPABASE_ANON_KEY` ainda é aceito para compatibilidade, mas prefira a chave publicável.
 3. Em um projeto Supabase novo, execute `supabase/setup.sql` uma única vez no SQL Editor. O script reúne as quatro migrações, políticas/RPCs e o seed inicial do questionário e da campanha.
 4. Não execute `setup.sql` em um banco onde essas migrações já foram aplicadas. Os arquivos individuais em `supabase/migrations/` e `supabase/seed.sql` continuam disponíveis para histórico e evolução do schema.
 5. Configure Auth > URL Configuration. Para desenvolvimento, use `http://localhost:3000` como Site URL e permita o callback local.
@@ -25,9 +25,18 @@ npm run dev
 
 Abra `http://localhost:3000`.
 
-## Diretório de funcionários
+## Deploy na Netlify
 
-O login aceita busca por nome, matrícula ou e-mail e exige senha da conta Supabase após a confirmação da pessoa. A lista local fica em `data/private/funcionarios.json` e é ignorada pelo Git por conter dados pessoais. Em outro ambiente, provisionar esse arquivo por um canal seguro; não publicar em repositórios ou servir como asset estático. Registros sem e-mail não podem autenticar até o administrador completar o cadastro.
+1. Conecte o repositório GitHub à Netlify. O arquivo `netlify.toml` configura `npm run build` e Node.js 20; o adaptador Next.js da Netlify cuida das rotas dinâmicas, Server Actions e middleware.
+2. Em **Site configuration > Environment variables**, defina `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` para os contextos de build e functions.
+3. Em **Supabase > Authentication > URL Configuration**, configure a URL pública da Netlify como Site URL e permita os URLs de callback usados pelos deploys e previews.
+4. Nunca configure uma chave `service_role` ou `sb_secret_*` com prefixo `NEXT_PUBLIC_`, nem adicione essas chaves ao repositório. A senha de cada usuário é gerenciada pelo Supabase Auth.
+
+O login usa e-mail e senha. O cadastro existente grava o nome no perfil Supabase e exige convite válido e confirmação de e-mail para ativação. O diretório local `data/private/funcionarios.json` não é necessário para esse fluxo.
+
+## Cadastro de funcionários
+
+O login usa e-mail e senha do Supabase Auth. No cadastro por convite, o nome informado é salvo no perfil Supabase quando a conta é criada; a senha é gerenciada pelo Auth. A lista legada em `data/private/funcionarios.json` não é necessária nesse fluxo e continua ignorada pelo Git.
 
 ## Primeiro administrador
 

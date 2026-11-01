@@ -4,9 +4,9 @@ import { getSupabaseConfig } from "@/lib/supabase/shared";
 import type { Database } from "@/lib/database.types";
 
 export async function createSupabaseServerClient() {
-  const { url, anonKey } = getSupabaseConfig();
+  const { url, key } = getSupabaseConfig();
   const cookieStore = await cookies();
-  return createServerClient<Database>(url, anonKey, {
+  return createServerClient<Database>(url, key, {
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll(cookiesToSet) {

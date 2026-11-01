@@ -4,11 +4,11 @@ import type { Database } from "@/lib/database.types";
 
 export async function middleware(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return NextResponse.next({ request });
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return NextResponse.next({ request });
 
   let response = NextResponse.next({ request });
-  const supabase = createServerClient<Database>(url, anonKey, {
+  const supabase = createServerClient<Database>(url, key, {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll(cookiesToSet) {

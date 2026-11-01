@@ -5,6 +5,6 @@ import type { Database } from "@/lib/database.types";
 import { getSupabaseConfig } from "@/lib/supabase/shared";
 
 export function createSupabaseBrowserClient() {
-  const { url, anonKey } = getSupabaseConfig();
-  return createBrowserClient<Database>(url, anonKey);
+  const { url, key } = getSupabaseConfig();
+  return createBrowserClient<Database>(url, key);
 }
