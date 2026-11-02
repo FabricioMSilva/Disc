@@ -1,5 +1,6 @@
 import { signOutAction } from "@/app/login/actions";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { MobileNavigation } from "@/components/layout/MobileNavigation";
 import { LogOut } from "lucide-react";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
@@ -15,7 +16,10 @@ export function AppShell({ children, name, email, role }: { children: React.Reac
       <AppSidebar role={role} />
       <div className="workspace">
         <header className="topbar">
-          <div className="topbar-title">People Insights <span style={{ color: "#cbd5e1", padding: "0 7px" }}>/</span>{roleLabel[role] ?? "Workspace"}</div>
+          <div className="topbar-start">
+            <MobileNavigation role={role} />
+            <div className="topbar-title">People Insights <span style={{ color: "#cbd5e1", padding: "0 7px" }}>/</span>{roleLabel[role] ?? "Workspace"}</div>
+          </div>
           <div className="user-pill">
             <ThemeToggle />
             <div className="avatar" aria-hidden="true">{initials}</div>

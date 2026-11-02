@@ -21,7 +21,7 @@ export default async function ParticipantDashboard() {
       <div className="surface kpi"><span className="kpi-label">Concluídas</span><p className="kpi-value">{completed}</p></div>
       <div className="surface kpi"><span className="kpi-label">Última atividade</span><p className="kpi-value" style={{ fontSize: 16 }}>{rows[0] ? new Date(rows[0].iniciada_em).toLocaleDateString("pt-BR") : "--"}</p></div>
     </div>
-    <section style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.5fr) minmax(240px, .8fr)", gap: 14 }}>
+    <section className="dashboard-feature-grid">
       <div className="surface" style={{ padding: 23 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}><div><p className="eyebrow">Sua próxima etapa</p><h2 style={{ margin: "7px 0", fontSize: 21 }}>{inProgress ? "Continue sua avaliação" : activeCycle ? activeCycle.titulo : "Nenhuma avaliação disponível"}</h2><p className="muted" style={{ fontSize: 12, lineHeight: 1.6 }}>{inProgress ? "Seu progresso foi salvo e você pode continuar de onde parou." : activeCycle?.descricao ?? "Quando uma avaliação for disponibilizada para você, ela aparecerá aqui."}</p></div><div style={{ color: "var(--blue)" }}><FileText size={23} /></div></div>
         {inProgress ? <Link className="button-primary" href="/avaliacao" style={{ marginTop: 13 }}>Continuar avaliação <ArrowRight size={15} /></Link> : activeCycle ? <Link className="button-primary" href="/identificacao" style={{ marginTop: 13 }}>Ver avaliação <ArrowRight size={15} /></Link> : null}

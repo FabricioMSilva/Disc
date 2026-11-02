@@ -51,17 +51,17 @@ const navigation: Record<Role, Item[]> = {
   auditor: [{ href: "/admin/auditoria", label: "Auditoria", icon: Archive }],
 };
 
-export function AppSidebar({ role }: { role: string }) {
+export function AppSidebar({ role, onNavigate }: { role: string; onNavigate?: () => void }) {
   const pathname = usePathname();
   const items = navigation[role as Role] ?? navigation.participant;
   return (
     <aside className="sidebar">
-      <BrandLogo href="/painel" variant="sidebar" />
+      <BrandLogo href="/painel" variant="sidebar" onClick={onNavigate} />
       <nav className="nav-section" aria-label="Navegação principal">
         <p className="nav-label">Workspace</p>
         {items.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
-          return <Link key={href} href={href} className={`nav-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}><Icon size={16} /><span>{label}</span></Link>;
+          return <Link key={href} href={href} onClick={onNavigate} className={`nav-link${active ? " active" : ""}`} aria-current={active ? "page" : undefined}><Icon size={16} /><span>{label}</span></Link>;
         })}
       </nav>
       <div style={{ marginTop: "auto", padding: "0 10px", color: "#7890ad", fontSize: 10, display: "flex", gap: 8, alignItems: "center" }}><LockKeyhole size={13} /> Acesso governado por perfil</div>

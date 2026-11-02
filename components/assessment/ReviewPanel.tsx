@@ -34,13 +34,21 @@ export function ReviewPanel({ assessmentId, questions, themes, answers, textAnsw
   const labels = ["", "Nunca", "Raramente", "Às vezes", "Frequentemente", "Sempre"];
 
   return <div style={{ maxWidth: 920, margin: "26px auto 0" }}>
+    {pending && <div className="assessment-submit-overlay" role="status" aria-live="polite" aria-busy="true">
+      <section className="assessment-submit-card">
+        <span className="assessment-submit-spinner" aria-hidden="true" />
+        <p className="eyebrow">Envio da avaliação</p>
+        <h2>Preparando seu resultado</h2>
+        <p>Estamos salvando suas respostas. Você será levado ao seu dashboard assim que o envio terminar.</p>
+      </section>
+    </div>}
     {themes.map((theme) => {
       const sectionQuestions = questions.filter((question) => question.theme_id === theme.id).sort((a, b) => a.ordem - b.ordem);
       return <section key={theme.id} className="surface" style={{ marginBottom: 14, overflow: "hidden" }}>
         <div style={{ padding: "15px 19px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center" }}><strong>{theme.nome}</strong><span className="status">{sectionQuestions.filter((question) => answerScores.has(question.id)).length}/{sectionQuestions.length} respondidas</span></div>
         {sectionQuestions.map((question) => {
           const score = answerScores.get(question.id);
-          return <div key={question.id} style={{ padding: "14px 19px", display: "grid", gridTemplateColumns: "1fr auto", gap: 12, borderBottom: "1px solid #edf1f6", alignItems: "center" }}>
+          return <div key={question.id} className="review-answer-row" style={{ borderBottom: "1px solid #edf1f6" }}>
             <div style={{ fontSize: 12, lineHeight: 1.5 }}>{question.texto}<div className="muted" style={{ marginTop: 3 }}>{score ? labels[score] : "Sem resposta"}</div></div>
             <Link className="button-secondary" href={`/avaliacao?pergunta=${question.id}`} style={{ minHeight: 34, fontSize: 11 }}>Revisar</Link>
           </div>;
@@ -51,7 +59,7 @@ export function ReviewPanel({ assessmentId, questions, themes, answers, textAnsw
       <div style={{ padding: "15px 19px", borderBottom: "1px solid var(--line)" }}><strong>Perguntas de escala</strong></div>
       {questions.filter((question) => question.tipo === "escala" && !question.theme_id).map((question) => {
         const score = answerScores.get(question.id);
-        return <div key={question.id} style={{ padding: "14px 19px", display: "grid", gridTemplateColumns: "1fr auto", gap: 12, borderBottom: "1px solid #edf1f6", alignItems: "center" }}><div style={{ fontSize: 12, lineHeight: 1.5 }}>{question.texto}<div className="muted" style={{ marginTop: 3 }}>{score ? labels[score] : "Sem resposta"}</div></div><Link className="button-secondary" href={`/avaliacao?pergunta=${question.id}`} style={{ minHeight: 34, fontSize: 11 }}>Revisar</Link></div>;
+        return <div key={question.id} className="review-answer-row" style={{ borderBottom: "1px solid #edf1f6" }}><div style={{ fontSize: 12, lineHeight: 1.5 }}>{question.texto}<div className="muted" style={{ marginTop: 3 }}>{score ? labels[score] : "Sem resposta"}</div></div><Link className="button-secondary" href={`/avaliacao?pergunta=${question.id}`} style={{ minHeight: 34, fontSize: 11 }}>Revisar</Link></div>;
       })}
     </section>}
     {questions.some((question) => !["escala", "texto"].includes(question.tipo)) && <section className="surface" style={{ marginBottom: 18, overflow: "hidden" }}>
@@ -60,14 +68,14 @@ export function ReviewPanel({ assessmentId, questions, themes, answers, textAnsw
         const answer = answerByQuestion.get(question.id);
         const selected = answer ? options.filter((option) => option.question_id === question.id && (option.id === answer.selected_option_id || selections.some((item) => item.answer_id === answer.id && item.option_id === option.id))).map((option) => option.label).join(", ") : "";
         const value = selected || (answer?.numeric_value !== null && answer?.numeric_value !== undefined ? String(answer.numeric_value) : answer?.date_value ?? (answer?.boolean_value === null || answer?.boolean_value === undefined ? "" : answer.boolean_value ? "Sim" : "Não"));
-        return <div key={question.id} style={{ padding: "14px 19px", display: "grid", gridTemplateColumns: "1fr auto", gap: 12, borderBottom: "1px solid #edf1f6", alignItems: "center" }}><div style={{ fontSize: 12, lineHeight: 1.5 }}>{question.texto}<div className="muted" style={{ marginTop: 3 }}>{value || "Sem resposta"}</div></div><Link className="button-secondary" href={`/perguntas?pergunta=${question.id}`} style={{ minHeight: 34, fontSize: 11 }}>Revisar</Link></div>;
+        return <div key={question.id} className="review-answer-row" style={{ borderBottom: "1px solid #edf1f6" }}><div style={{ fontSize: 12, lineHeight: 1.5 }}>{question.texto}<div className="muted" style={{ marginTop: 3 }}>{value || "Sem resposta"}</div></div><Link className="button-secondary" href={`/perguntas?pergunta=${question.id}`} style={{ minHeight: 34, fontSize: 11 }}>Revisar</Link></div>;
       })}
     </section>}
     {questions.some((question) => question.tipo === "texto") && <section className="surface" style={{ marginBottom: 18, overflow: "hidden" }}>
       <div style={{ padding: "15px 19px", borderBottom: "1px solid var(--line)" }}><strong>Autoavaliação reflexiva</strong></div>
       {questions.filter((question) => question.tipo === "texto").map((question) => {
         const answer = reflections.get(question.id)?.trim() ?? "";
-        return <div key={question.id} style={{ padding: "14px 19px", display: "grid", gridTemplateColumns: "1fr auto", gap: 12, borderBottom: "1px solid #edf1f6", alignItems: "center" }}>
+        return <div key={question.id} className="review-answer-row" style={{ borderBottom: "1px solid #edf1f6" }}>
           <div style={{ fontSize: 12, lineHeight: 1.5 }}>{question.texto}<div className="muted" style={{ marginTop: 3 }}>{answer ? `${answer.slice(0, 130)}${answer.length > 130 ? "..." : ""}` : "Sem resposta"}</div></div>
           <Link className="button-secondary" href={`/reflexao?pergunta=${question.id}`} style={{ minHeight: 34, fontSize: 11 }}>Revisar</Link>
         </div>;

@@ -5,9 +5,10 @@ import { APP_DESCRIPTION, APP_NAME } from "@/lib/app-config";
 type BrandLogoProps = {
   href?: string;
   variant?: "header" | "sidebar" | "login";
+  onClick?: () => void;
 };
 
-export function BrandLogo({ href, variant = "header" }: BrandLogoProps) {
+export function BrandLogo({ href, variant = "header", onClick }: BrandLogoProps) {
   const logo = (
     <span className={`brand-logo-surface brand-logo-${variant}`}>
       <Image
@@ -21,5 +22,5 @@ export function BrandLogo({ href, variant = "header" }: BrandLogoProps) {
     </span>
   );
 
-  return href ? <Link href={href} className="brand-logo-link">{logo}</Link> : logo;
+  return href ? <Link href={href} className="brand-logo-link" onClick={onClick}>{logo}</Link> : logo;
 }
