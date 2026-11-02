@@ -154,7 +154,18 @@ export default function LoginPage() {
           },
         });
         if (error) {
-          showMessage("Não foi possível iniciar o cadastro. Confira se o e-mail do funcionário está correto.");
+          console.error("Supabase sign-up failed", { code: error.code, status: error.status, message: error.message });
+          const errorMessage = error.message.toLocaleLowerCase("pt-BR");
+          if (error.code === "user_already_exists" || errorMessage.includes("already registered")) {
+            showMessage("Este cadastro já tem uma conta. Atualize a página e pesquise novamente; se continuar pendente, o administrador precisa revisar a conta no Supabase.");
+          } else if (error.status === 429 || errorMessage.includes("rate limit")) {
+            showMessage("Muitas tentativas de cadastro. Aguarde alguns minutos antes de tentar novamente.");
+          } else if (errorMessage.includes("database error saving new user")) {
+            showMessage("O Supabase não conseguiu criar o perfil deste cadastro. O administrador precisa verificar o registro de usuário no banco.");
+          } else {
+            const errorCode = error.code ?? (error.status ? `HTTP ${error.status}` : "sem código");
+            showMessage(`O Supabase recusou o cadastro (${errorCode}). Confirme que “Confirm email” está desligado e salvo; se já estiver, envie este código ao administrador.`);
+          }
           return;
         }
         if (data.session) {
