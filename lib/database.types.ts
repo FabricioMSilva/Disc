@@ -5,6 +5,7 @@ export type Database = {
   public: {
     Tables: {
       profiles: Table<{ id: string; nome: string; email: string; matricula: string | null; funcao: string | null; equipe: string | null; gestor: string | null; role: string; ativo: boolean; status: string; created_at: string; updated_at: string }>;
+      employee_directory: Table<{ id: string; nome: string; email: string | null; matricula: string | null; horario_trabalho: string | null; local_trabalho: string | null; perfil: string | null; ativo: boolean; auth_user_id: string | null; created_at: string }>;
       teams: Table<{ id: string; name: string; code: string | null; description: string | null; active: boolean; area_id: string | null; created_by: string | null; created_at: string; updated_at: string }>;
       team_members: Table<{ id: string; team_id: string; user_id: string; active: boolean; started_at: string; ended_at: string | null; created_by: string | null; created_at: string }>;
       manager_team_assignments: Table<{ id: string; manager_id: string; team_id: string; active: boolean; valid_from: string; valid_until: string | null; created_by: string | null; created_at: string }>;
@@ -25,6 +26,7 @@ export type Database = {
       campaign_teams: Table<{ campaign_id: string; team_id: string; created_at: string }>;
       campaign_participants: Table<{ id: string; campaign_id: string; participant_id: string; team_id: string | null; status: string; assigned_by: string | null; assigned_at: string }>;
       invitations: Table<{ id: string; email: string; team_id: string | null; role: string; invited_by: string; status: string; expires_at: string; accepted_at: string | null; created_at: string }>;
+      disc_profile_catalog: Table<{ code: string; name: string; description: string; traits: string[]; color: string; sort_order: number; action_recommendation: string }>;
     };
     Views: {
       admin_assessment_results: { Row: { assessment_id: string; cycle_id: string; user_id: string; participante: string; email: string; matricula: string | null; funcao: string | null; equipe: string | null; gestor: string | null; status: string; iniciada_em: string; concluida_em: string | null; dominancia: number | null; influencia: number | null; estabilidade: number | null; conformidade: number | null; seguranca: number | null; disciplina: number | null; trabalho_equipe: number | null; comunicacao: number | null; indice_competencias: number | null; perfil_predominante: string | null; resultado_ponderado: number | null; classificacao_competencias: string | null; faixas_disc: Json | null; recomendacao: string | null; total_score: number | null; dimensions: Json | null; dominant_dimension: string | null }; Relationships: [] };
@@ -37,6 +39,9 @@ export type Database = {
       is_auditor: { Args: Record<string, never>; Returns: boolean };
       manages_team: { Args: { p_team_id: string }; Returns: boolean };
       can_access_participant: { Args: { p_participant_id: string }; Returns: boolean };
+      can_view_assessment: { Args: { p_assessment_id: string }; Returns: boolean };
+      can_view_question: { Args: { p_question_id: string }; Returns: boolean };
+      team_assessment_progress: { Args: { p_team_id: string | null }; Returns: Array<{ team_id: string; team_name: string; user_id: string; participant_name: string; matricula: string | null; funcao: string | null; assessment_id: string | null; status: string | null; answered_required: number; total_required: number; completion_percent: number; concluded_at: string | null }> };
       add_team_member: { Args: { p_team_id: string; p_user_id: string }; Returns: string };
       can_manage_questionnaire: { Args: { p_questionnaire_id: string }; Returns: boolean };
       create_questionnaire: { Args: { p_title: string; p_description: string; p_slug: string; p_visibility: string }; Returns: string };
@@ -53,6 +58,7 @@ export type Database = {
       save_text_answer: { Args: { p_assessment_id: string; p_question_id: string; p_answer_text: string }; Returns: undefined };
       save_question_answer: { Args: { p_assessment_id: string; p_question_id: string; p_value: Json }; Returns: undefined };
       complete_assessment: { Args: { p_assessment_id: string }; Returns: undefined };
+      search_employee_directory: { Args: { p_query: string }; Returns: { employee_id: string; name: string; email: string | null; employee_number: string | null; profile: string | null; has_account: boolean; has_password: boolean; email_confirmed: boolean }[] };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

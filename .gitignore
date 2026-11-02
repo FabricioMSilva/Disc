@@ -5,5 +5,6 @@ build
 .env*
 !.env.example
 /data/private/funcionarios.json
+/data/private/funcionarios_import.csv
 next-env.d.ts
 npm-debug.log*

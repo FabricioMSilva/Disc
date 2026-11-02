@@ -5,14 +5,16 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Save } from "lucide-react";
 import type { Question } from "@/lib/database.types";
 import { saveStructuredAnswerAction } from "@/app/assessment-actions";
+import { QuestionProgress } from "@/components/assessment/QuestionProgress";
+import { QuestionSpeech, speakQuestion } from "@/components/assessment/QuestionSpeech";
 
 type Option = { id: string; question_id: string; label: string; score: number | null; display_order: number };
 type Answer = { id: string; question_id: string; selected_option_id: string | null; numeric_value: number | null; boolean_value: boolean | null; date_value: string | null };
 type Value = { optionId?: string; optionIds?: string[]; score?: number; value?: string | number | boolean };
 
-export function StructuredQuestionFlow({ assessmentId, questions, options, answers, selections, hasTextQuestions, startQuestionId }: {
+export function StructuredQuestionFlow({ assessmentId, questions, options, answers, selections, hasTextQuestions, startQuestionId, nextQuestion }: {
   assessmentId: string; questions: Question[]; options: Option[]; answers: Answer[];
-  selections: { answer_id: string; option_id: string }[]; hasTextQuestions: boolean; startQuestionId?: string;
+  selections: { answer_id: string; option_id: string }[]; hasTextQuestions: boolean; startQuestionId?: string; nextQuestion?: Question;
 }) {
   const router = useRouter();
   const structured = useMemo(() => questions.filter((question) => !["escala", "texto"].includes(question.tipo)), [questions]);
@@ -53,24 +55,43 @@ export function StructuredQuestionFlow({ assessmentId, questions, options, answe
     });
   };
   if (!current) return <div className="surface empty-state">Não há perguntas deste tipo nesta avaliação.</div>;
-  const progress = Math.round(((index + 1) / structured.length) * 100);
   const choose = (key: keyof Value, selected: Value[keyof Value]) => save(current.id, { ...currentValue, [key]: selected });
   const next = () => {
     if (!answered || (hasValue && !persisted.has(current.id)) || pending) return;
-    if (index === structured.length - 1) router.push(hasTextQuestions ? "/reflexao" : "/revisao");
-    else { setIndex((value) => value + 1); setError(""); setStatus(""); }
+    if (index === structured.length - 1) {
+      if (hasTextQuestions && nextQuestion) speakQuestion(nextQuestion.id, nextQuestion.texto);
+      router.push(hasTextQuestions ? "/reflexao" : "/revisao");
+    }
+    else {
+      const nextQuestion = structured[index + 1];
+      speakQuestion(nextQuestion.id, nextQuestion.texto);
+      setIndex((value) => value + 1);
+      setError("");
+      setStatus("");
+    }
   };
-  return <div style={{ maxWidth: 850, margin: "0 auto" }}>
-    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)" }}><span>Perguntas adicionais</span><span>{index + 1} de {structured.length}</span></div>
-    <div role="progressbar" aria-label="Progresso das perguntas" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} style={{ height: 5, marginTop: 10, background: "#dce4ef", borderRadius: 8 }}><div style={{ width: `${progress}%`, height: "100%", background: "var(--blue)", borderRadius: 8 }} /></div>
-    <section className="surface" style={{ marginTop: 28, padding: "clamp(23px, 5vw, 44px)" }}>
-      <p className="eyebrow">Pergunta {index + 1} de {structured.length}</p><h1 style={{ maxWidth: 700, margin: "14px auto 28px", textAlign: "center", fontSize: "clamp(23px, 4vw, 31px)", lineHeight: 1.35 }}>{current.texto}</h1>
-      {current.tipo === "likert" || current.tipo === "escolha_unica" ? <div role="radiogroup" aria-label={current.texto} style={{ display: "grid", gap: 9, maxWidth: 560, margin: "0 auto" }}>{currentOptions.map((option) => <button key={option.id} type="button" className={current.tipo === "likert" ? "scale-option" : "button-secondary"} aria-checked={current.tipo === "likert" ? currentValue?.score === option.score : currentValue?.optionId === option.id} role="radio" disabled={pending} onClick={() => current.tipo === "likert" ? choose("score", option.score ?? 0) : choose("optionId", option.id)}>{option.label}</button>)}</div>
-      : current.tipo === "multipla_escolha" ? <div style={{ display: "grid", gap: 9, maxWidth: 560, margin: "0 auto" }}>{currentOptions.map((option) => { const selected = currentValue?.optionIds ?? []; return <label key={option.id} className="button-secondary" style={{ justifyContent: "flex-start", cursor: "pointer" }}><input type="checkbox" checked={selected.includes(option.id)} disabled={pending} onChange={(event) => choose("optionIds", event.target.checked ? [...selected, option.id] : selected.filter((id) => id !== option.id))} />{option.label}</label>; })}</div>
-      : current.tipo === "booleano" ? <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>{[true, false].map((value) => <button type="button" className={currentValue?.value === value ? "button-primary" : "button-secondary"} disabled={pending} key={String(value)} onClick={() => choose("value", value)}>{value ? "Sim" : "Não"}</button>)}</div>
-      : <input className="field" type={current.tipo === "data" ? "date" : "number"} value={currentValue?.value === undefined ? "" : String(currentValue.value)} onChange={(event) => { setPersisted((state) => { const next = new Set(state); next.delete(current.id); return next; }); setValues((state) => ({ ...state, [current.id]: { value: current.tipo === "numero" && event.target.value !== "" ? Number(event.target.value) : event.target.value } })); }} onBlur={() => { if (currentValue?.value !== undefined && currentValue.value !== "") save(current.id, currentValue); }} aria-label={current.texto} style={{ maxWidth: 360, margin: "0 auto", display: "block" }} />}
-      <div aria-live="polite" style={{ minHeight: 24, marginTop: 14, fontSize: 11, textAlign: "center", color: error ? "var(--red)" : "var(--muted)" }}>{error || (status && <><Save size={12} style={{ verticalAlign: "middle", marginRight: 5 }} />{status}</>)}</div>
+  const back = () => {
+    if (index === 0) {
+      router.push("/avaliacao");
+      return;
+    }
+    const previousQuestion = structured[index - 1];
+    speakQuestion(previousQuestion.id, previousQuestion.texto);
+    setIndex((value) => value - 1);
+  };
+  return <div className="question-flow">
+    <QuestionProgress label="Perguntas adicionais" current={index + 1} total={structured.length} ariaLabel="Progresso das perguntas adicionais" />
+    <section className="surface question-card">
+      <p className="eyebrow">Pergunta {index + 1} de {structured.length}</p><h2 className="question-text">{current.texto}</h2><QuestionSpeech questionId={current.id} text={current.texto} />
+      {current.tipo === "likert" || current.tipo === "escolha_unica" ? <div className="structured-option-list" role="radiogroup" aria-label={current.texto}>{currentOptions.map((option) => {
+        const selected = current.tipo === "likert" ? currentValue?.score === option.score : currentValue?.optionId === option.id;
+        return <button key={option.id} type="button" className={`answer-choice${selected ? " is-selected" : ""}`} aria-checked={selected} role="radio" disabled={pending} onClick={() => current.tipo === "likert" ? choose("score", option.score ?? 0) : choose("optionId", option.id)}>{option.label}</button>;
+      })}</div>
+      : current.tipo === "multipla_escolha" ? <div className="structured-option-list">{currentOptions.map((option) => { const selected = currentValue?.optionIds ?? []; return <label key={option.id} className="structured-checkbox-option"><input type="checkbox" checked={selected.includes(option.id)} disabled={pending} onChange={(event) => choose("optionIds", event.target.checked ? [...selected, option.id] : selected.filter((id) => id !== option.id))} />{option.label}</label>; })}</div>
+      : current.tipo === "booleano" ? <div className="structured-binary-options">{[true, false].map((value) => <button type="button" className={`answer-choice${currentValue?.value === value ? " is-selected" : ""}`} disabled={pending} key={String(value)} onClick={() => choose("value", value)}>{value ? "Sim" : "Não"}</button>)}</div>
+      : <input className="field structured-number-field" type={current.tipo === "data" ? "date" : "number"} value={currentValue?.value === undefined ? "" : String(currentValue.value)} onChange={(event) => { setPersisted((state) => { const next = new Set(state); next.delete(current.id); return next; }); setValues((state) => ({ ...state, [current.id]: { value: current.tipo === "numero" && event.target.value !== "" ? Number(event.target.value) : event.target.value } })); }} onBlur={() => { if (currentValue?.value !== undefined && currentValue.value !== "") save(current.id, currentValue); }} aria-label={current.texto} />}
+      <div className={`question-feedback${error ? " is-error" : ""}`} aria-live="polite">{error || (status && <><Save size={13} />{status}</>)}</div>
     </section>
-    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 18 }}><button type="button" className="button-secondary" disabled={pending} onClick={() => index ? setIndex((value) => value - 1) : router.push("/avaliacao")}><ArrowLeft size={15} /> Voltar</button><button type="button" className="button-primary" disabled={!answered || (hasValue && !persisted.has(current.id)) || pending} onClick={next}>{index === structured.length - 1 ? "Continuar" : "Próxima pergunta"} {index === structured.length - 1 ? <Check size={15} /> : <ArrowRight size={15} />}</button></div>
+    <div className="question-navigation"><button type="button" className="button-secondary" disabled={pending} onClick={back}><ArrowLeft size={15} /> Voltar</button><button type="button" className="button-primary" disabled={!answered || (hasValue && !persisted.has(current.id)) || pending} onClick={next}>{index === structured.length - 1 ? "Continuar" : "Próxima pergunta"} {index === structured.length - 1 ? <Check size={15} /> : <ArrowRight size={15} />}</button></div>
   </div>;
 }

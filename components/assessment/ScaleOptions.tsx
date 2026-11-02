@@ -1,17 +1,38 @@
 "use client";
 
+import { Check } from "lucide-react";
+
 const options = ["Nunca", "Raramente", "Às vezes", "Frequentemente", "Sempre"] as const;
 
-export function ScaleOptions({ value, onChange, disabled = false }: { value?: number; onChange: (score: number) => void; disabled?: boolean }) {
+export function ScaleOptions({ questionId, value, onChange, disabled = false }: {
+  questionId: string;
+  value?: number;
+  onChange: (score: number) => void;
+  disabled?: boolean;
+}) {
   return (
-    <div role="radiogroup" aria-label="Frequência do comportamento" style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 9 }}>
+    <div className="scale-options" role="radiogroup" aria-label="Frequência do comportamento">
       {options.map((label, index) => {
         const score = index + 1;
-        const selected = value === score;
-        return <button key={label} type="button" role="radio" aria-checked={selected} disabled={disabled} onClick={() => onChange(score)}
-          style={{ minHeight: 65, border: `1px solid ${selected ? "var(--blue)" : "var(--line)"}`, borderRadius: 7, background: selected ? "#e8f3ff" : "white", color: selected ? "var(--blue)" : "var(--ink)", fontWeight: selected ? 700 : 500, fontSize: 12, padding: "8px 5px", opacity: disabled ? .65 : 1 }}>
-          {label}
-        </button>;
+        return (
+          <label key={label} className="scale-option">
+            <input
+              className="scale-option-input"
+              type="radio"
+              name={`scale-${questionId}`}
+              value={score}
+              checked={value === score}
+              disabled={disabled}
+              aria-label={`${score}: ${label}`}
+              onChange={() => onChange(score)}
+            />
+            <span className="scale-option-card">
+              <span className="scale-option-number" aria-hidden="true">{score}</span>
+              <span className="scale-option-label">{label}</span>
+              <span className="scale-option-check" aria-hidden="true"><Check size={14} strokeWidth={2.5} /></span>
+            </span>
+          </label>
+        );
       })}
     </div>
   );

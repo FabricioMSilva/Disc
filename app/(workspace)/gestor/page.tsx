@@ -1,17 +1,19 @@
 import Link from "next/link";
 import { ArrowRight, ClipboardCheck, UsersRound } from "lucide-react";
-import { requireManager } from "@/lib/auth";
+import { requireTeamManager } from "@/lib/auth";
+import { DashboardCharts } from "@/components/admin/DashboardCharts";
 
 export default async function ManagerDashboard() {
-  const { supabase, user } = await requireManager();
+  const { supabase, user } = await requireTeamManager();
   const now = new Date().toISOString();
   const { data: assignments } = await supabase.from("manager_team_assignments").select("team_id")
     .eq("manager_id", user.id).eq("active", true).lte("valid_from", now).or(`valid_until.is.null,valid_until.gt.${now}`);
   const teamIds = [...new Set((assignments ?? []).map((assignment) => assignment.team_id))];
-  const [{ data: teams }, { data: memberships }] = teamIds.length ? await Promise.all([
+  const [{ data: teams }, { data: memberships }, { data: visibleResults }] = teamIds.length ? await Promise.all([
     supabase.from("teams").select("id,name").in("id", teamIds),
     supabase.from("team_members").select("user_id,team_id").in("team_id", teamIds).eq("active", true),
-  ]) : [{ data: [] }, { data: [] }];
+    supabase.from("admin_assessment_results").select("equipe,perfil_predominante").eq("status", "concluida"),
+  ]) : [{ data: [] }, { data: [] }, { data: [] }];
   const userIds = [...new Set((memberships ?? []).map((member) => member.user_id))];
   const { data: assessments } = userIds.length ? await supabase.from("assessments").select("user_id,status").in("user_id", userIds) : { data: [] };
   const rows = assessments ?? [];
@@ -20,9 +22,19 @@ export default async function ManagerDashboard() {
   const peopleCount = userIds.length;
   const participation = peopleCount ? Math.round((new Set(rows.map((item) => item.user_id)).size / peopleCount) * 100) : 0;
   const metrics = [{ label: "Integrantes", value: peopleCount }, { label: "Pendentes", value: Math.max(peopleCount - rows.length, 0) }, { label: "Em andamento", value: inProgress }, { label: "Concluídas", value: completed }, { label: "Participação", value: `${participation}%` }];
+  const teamCounts = new Map<string, number>();
+  const profileCounts = new Map<string, number>();
+  (visibleResults ?? []).forEach((result) => {
+    const teamName = result.equipe || "Sem equipe";
+    teamCounts.set(teamName, (teamCounts.get(teamName) ?? 0) + 1);
+    if (result.perfil_predominante) profileCounts.set(result.perfil_predominante, (profileCounts.get(result.perfil_predominante) ?? 0) + 1);
+  });
+  const teamChart = [...teamCounts].map(([name, total]) => ({ name, total }));
+  const discChart = [...profileCounts].map(([name, total]) => ({ name, total }));
   return <>
     <p className="eyebrow">Painel da equipe</p><h1 className="page-title">Visão geral</h1><p className="page-subtitle">Acompanhamento de participação nas equipes sob sua gestão.</p>
     <div className="kpi-grid">{metrics.map((metric) => <article key={metric.label} className="surface kpi"><span className="kpi-label">{metric.label}</span><p className="kpi-value">{metric.value}</p></article>)}</div>
+    <DashboardCharts byTeam={teamChart} discProfiles={discChart} />
     <section className="surface" style={{ padding: 20 }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}><div><p className="eyebrow">Escopo autorizado</p><h2 style={{ fontSize: 18, margin: "6px 0" }}>Equipes vinculadas</h2></div><UsersRound color="var(--blue)" /></div>
       {(teams ?? []).length ? <div style={{ display: "flex", flexWrap: "wrap", gap: 9, marginTop: 12 }}>{teams?.map((team) => <span className="status" key={team.id}>{team.name}</span>)}</div> : <p className="muted" style={{ fontSize: 12 }}>Nenhuma equipe foi vinculada ao seu perfil.</p>}
       <div style={{ display: "flex", gap: 9, flexWrap: "wrap", marginTop: 20 }}><Link href="/gestor/equipe" className="button-primary">Ver integrantes <ArrowRight size={15} /></Link><Link href="/campanhas" className="button-secondary"><ClipboardCheck size={15} /> Campanhas</Link></div>

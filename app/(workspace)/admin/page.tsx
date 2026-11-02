@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Users, UsersRound, ClipboardCheck, FileQuestion, Megaphone, Percent } from "lucide-react";
+import { ArrowUpRight, ClipboardCheck, Eye, FileQuestion, Megaphone, Percent, Users, UsersRound } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { DashboardCharts } from "@/components/admin/DashboardCharts";
 
@@ -34,7 +34,7 @@ export default async function AdminDashboard() {
   const discChart = [...profilesCounts].map(([name, total]) => ({ name, total }));
   const expiring = (campaigns ?? []).filter((item) => item.status === "active" && item.ends_at && new Date(item.ends_at).getTime() - Date.now() < 7 * 86400000);
   return <>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", gap: 16, flexWrap: "wrap" }}><div><p className="eyebrow">Command center administrativo</p><h1 className="page-title">Visão geral</h1><p className="page-subtitle">Operação, participação e desenvolvimento em um só lugar.</p></div><Link href="/campanhas" className="button-primary">Nova campanha <ArrowUpRight size={15} /></Link></div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", gap: 16, flexWrap: "wrap" }}><div><p className="eyebrow">Command center administrativo</p><h1 className="page-title">Visão geral</h1><p className="page-subtitle">Operação, participação e desenvolvimento em um só lugar.</p></div><div className="admin-dashboard-actions"><Link href="/admin/visualizar?como=participante" className="button-secondary"><Eye size={15} /> Ver como participante</Link><Link href="/admin/visualizar?como=jossimar" className="button-secondary"><Eye size={15} /> Ver como Jossimar</Link><Link href="/campanhas" className="button-primary">Nova campanha <ArrowUpRight size={15} /></Link></div></div>
     <div className="kpi-grid">{cards.map(({ label, value, icon: Icon }) => <article key={label} className="surface kpi"><div style={{ display: "flex", justifyContent: "space-between", color: "var(--muted)" }}><span className="kpi-label">{label}</span><Icon size={16} color="var(--blue)" /></div><p className="kpi-value">{value}</p></article>)}</div>
     {expiring.length > 0 && <section className="surface" style={{ padding: 16, borderLeft: "3px solid var(--orange)", marginBottom: 14 }}><strong style={{ fontSize: 12 }}>Campanhas próximas do encerramento</strong><p className="muted" style={{ fontSize: 11, margin: "5px 0 0" }}>{expiring.map((item) => item.name).join(" · ")}</p></section>}
     <DashboardCharts byTeam={teamChart} discProfiles={discChart} />

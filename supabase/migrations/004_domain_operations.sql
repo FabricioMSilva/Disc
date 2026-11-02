@@ -546,7 +546,7 @@ begin
       join public.questions q on q.theme_id = t.id and q.tipo = 'escala'
       join public.answers a on a.question_id = q.id and a.assessment_id = p_assessment_id
       where t.codigo in ('D','I','S','C') group by t.codigo
-    ) d order by total desc, case codigo when 'D' then 1 when 'I' then 2 when 'S' then 3 else 4 end limit 1;
+    ) d order by d.total desc, case d.codigo when 'D' then 1 when 'I' then 2 when 'S' then 3 else 4 end limit 1;
     total := scores[5] + scores[6] + scores[7] + scores[8];
     weighted_result := round(((scores[1] + scores[2] + scores[3] + scores[4])::numeric / 100 * 20)
       + (scores[5]::numeric / 25 * 30) + (scores[6]::numeric / 25 * 20)

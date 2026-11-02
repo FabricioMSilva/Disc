@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { APP_DESCRIPTION, APP_NAME } from "@/lib/app-config";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "People Insights Command Center",
-  description: "Plataforma corporativa de avaliações e desenvolvimento de equipes.",
+  title: `${APP_NAME} | ${APP_DESCRIPTION}`,
+  description: `Plataforma ${APP_NAME} para avaliação comportamental.`,
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

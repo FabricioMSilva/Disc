@@ -164,7 +164,7 @@
 			"args": [
 				"-NoProfile",
 				"-Command",
-				"$files = @(\"supabase/migrations/001_disc_schema.sql\", \"supabase/migrations/002_roles_and_teams.sql\", \"supabase/migrations/003_questionnaires_campaigns.sql\", \"supabase/migrations/004_domain_operations.sql\", \"supabase/seed.sql\"); $builder = [System.Text.StringBuilder]::new(); [void]$builder.AppendLine(\"-- People Insights: complete Supabase setup for a new project.\"); [void]$builder.AppendLine(\"-- Run once in Supabase SQL Editor. Includes the initial DISC questionnaire and campaign seed.\"); [void]$builder.AppendLine(\"-- Do not run on a database where these migrations have already been applied.\"); foreach ($file in $files) { [void]$builder.AppendLine(); [void]$builder.AppendLine(\"-- ===== $file =====\"); [void]$builder.AppendLine(); [void]$builder.Append([System.IO.File]::ReadAllText((Join-Path $PWD $file))); [void]$builder.AppendLine(); }; [System.IO.File]::WriteAllText((Join-Path $PWD \"supabase/setup.sql\"), $builder.ToString(), [System.Text.UTF8Encoding]::new($false)); Get-Item supabase/setup.sql | Format-Table Name,Length"
+				"$files = @(\"supabase/migrations/001_disc_schema.sql\", \"supabase/migrations/002_roles_and_teams.sql\", \"supabase/migrations/003_questionnaires_campaigns.sql\", \"supabase/migrations/004_domain_operations.sql\", \"supabase/migrations/005_employee_directory.sql\", \"supabase/migrations/006_employee_directory_work_fields.sql\", \"supabase/migrations/007_fix_assessment_completion_order.sql\", \"supabase/migrations/008_results_dashboard_access.sql\", \"supabase/seed.sql\"); $builder = [System.Text.StringBuilder]::new(); [void]$builder.AppendLine(\"-- People Insights: complete Supabase setup for a new project.\"); [void]$builder.AppendLine(\"-- Run once in Supabase SQL Editor. Includes employee directory and the initial DISC questionnaire and campaign seed.\"); [void]$builder.AppendLine(\"-- Do not run on a database where these migrations have already been applied.\"); foreach ($file in $files) { [void]$builder.AppendLine(); [void]$builder.AppendLine(\"-- ===== $file =====\"); [void]$builder.AppendLine(); [void]$builder.Append([System.IO.File]::ReadAllText((Join-Path $PWD $file))); [void]$builder.AppendLine(); }; [System.IO.File]::WriteAllText((Join-Path $PWD \"supabase/setup.sql\"), $builder.ToString(), [System.Text.UTF8Encoding]::new($false)); Get-Item supabase/setup.sql | Format-Table Name,Length"
 			],
 			"isBackground": false,
 			"problemMatcher": [],
@@ -176,7 +176,7 @@
 			"command": "cmd.exe",
 			"args": [
 				"/c",
-				"copy /b supabase\\setup-header.sql+supabase\\migrations\\001_disc_schema.sql+supabase\\migrations\\002_roles_and_teams.sql+supabase\\migrations\\003_questionnaires_campaigns.sql+supabase\\migrations\\004_domain_operations.sql+supabase\\seed.sql supabase\\setup.sql"
+				"copy /b supabase\\setup-header.sql+supabase\\migrations\\001_disc_schema.sql+supabase\\migrations\\002_roles_and_teams.sql+supabase\\migrations\\003_questionnaires_campaigns.sql+supabase\\migrations\\004_domain_operations.sql+supabase\\migrations\\005_employee_directory.sql+supabase\\migrations\\006_employee_directory_work_fields.sql+supabase\\migrations\\007_fix_assessment_completion_order.sql+supabase\\migrations\\008_results_dashboard_access.sql+supabase\\seed.sql supabase\\setup.sql"
 			],
 			"isBackground": false,
 			"problemMatcher": [],
@@ -188,7 +188,7 @@
 			"command": "cmd.exe",
 			"args": [
 				"/c",
-				"copy /b /y supabase\\migrations\\001_disc_schema.sql+supabase\\migrations\\002_roles_and_teams.sql+supabase\\migrations\\003_questionnaires_campaigns.sql+supabase\\migrations\\004_domain_operations.sql+supabase\\seed.sql supabase\\setup.sql"
+				"copy /b /y supabase\\migrations\\001_disc_schema.sql+supabase\\migrations\\002_roles_and_teams.sql+supabase\\migrations\\003_questionnaires_campaigns.sql+supabase\\migrations\\004_domain_operations.sql+supabase\\migrations\\005_employee_directory.sql+supabase\\migrations\\006_employee_directory_work_fields.sql+supabase\\migrations\\007_fix_assessment_completion_order.sql+supabase\\migrations\\008_results_dashboard_access.sql+supabase\\seed.sql supabase\\setup.sql"
 			],
 			"isBackground": false,
 			"problemMatcher": [],

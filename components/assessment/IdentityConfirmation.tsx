@@ -19,7 +19,7 @@ export function IdentityConfirmation({ name, email }: { name: string; email: str
     <section className="surface" style={{ maxWidth: 650, margin: "36px auto 0", padding: "clamp(24px, 5vw, 42px)" }}>
       <div style={{ width: 48, height: 48, display: "grid", placeItems: "center", borderRadius: 8, color: "var(--blue)", background: "#e8f3ff" }}><UserRound size={23} /></div>
       <p className="eyebrow" style={{ marginTop: 24 }}>Confirmação de identidade</p>
-      <h1 style={{ fontSize: 28, margin: "8px 0 24px" }}>Você confirma que é a pessoa identificada nesta conta?</h1>
+      <h1 style={{ fontSize: 23, margin: "8px 0 20px" }}>Você confirma que é a pessoa identificada nesta conta?</h1>
       <div style={{ padding: 17, background: "var(--page)", borderRadius: 6, display: "grid", gap: 5, marginBottom: 19 }}>
         <strong>{name || "Nome não informado"}</strong><span className="muted" style={{ fontSize: 12 }}>{email}</span>
       </div>

@@ -24,3 +24,9 @@ export async function requireManager() {
   if (!session.profile || !["manager", "admin", "super_admin"].includes(session.profile.role)) redirect("/acesso-negado");
   return session;
 }
+
+export async function requireTeamManager() {
+  const session = await requireUser();
+  if (session.profile?.role !== "manager") redirect("/acesso-negado");
+  return session;
+}

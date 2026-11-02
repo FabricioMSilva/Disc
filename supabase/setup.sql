@@ -1,9 +1,9 @@
 -- People Insights: complete Supabase setup for a new project.
--- Run once in Supabase SQL Editor. Includes the initial DISC questionnaire and campaign seed.
+-- Run once in Supabase SQL Editor. Includes employee directory and the initial DISC questionnaire and campaign seed.
 -- Do not run on a database where these migrations have already been applied.
-BEGIN;
 
 -- ===== supabase/migrations/001_disc_schema.sql =====
+
 create extension if not exists pgcrypto;
 
 create or replace function public.set_updated_at()
@@ -296,6 +296,7 @@ left join public.assessment_results r on r.assessment_id = a.id;
 grant select on public.admin_assessment_results to authenticated;
 
 -- ===== supabase/migrations/002_roles_and_teams.sql =====
+
 alter table public.profiles drop constraint profiles_role_check;
 alter table public.profiles add constraint profiles_role_check
   check (role in ('super_admin', 'admin', 'manager', 'questionnaire_editor', 'participant', 'auditor'));
@@ -512,6 +513,7 @@ create policy audit_read_authorized on public.audit_logs for select to authentic
 using ((select public.is_admin()) or (select public.is_auditor()));
 
 -- ===== supabase/migrations/003_questionnaires_campaigns.sql =====
+
 create table public.questionnaires (
   id uuid primary key default gen_random_uuid(),
   title text not null,
@@ -800,6 +802,7 @@ grant execute on function public.version_is_editable(uuid) to authenticated;
 grant execute on function public.can_access_questionnaire(uuid) to authenticated;
 
 -- ===== supabase/migrations/004_domain_operations.sql =====
+
 create table public.questionnaire_results (
   id uuid primary key default gen_random_uuid(),
   assessment_id uuid not null unique references public.assessments(id) on delete restrict,
@@ -1348,7 +1351,7 @@ begin
       join public.questions q on q.theme_id = t.id and q.tipo = 'escala'
       join public.answers a on a.question_id = q.id and a.assessment_id = p_assessment_id
       where t.codigo in ('D','I','S','C') group by t.codigo
-    ) d order by total desc, case codigo when 'D' then 1 when 'I' then 2 when 'S' then 3 else 4 end limit 1;
+    ) d order by d.total desc, case d.codigo when 'D' then 1 when 'I' then 2 when 'S' then 3 else 4 end limit 1;
     total := scores[5] + scores[6] + scores[7] + scores[8];
     weighted_result := round(((scores[1] + scores[2] + scores[3] + scores[4])::numeric / 100 * 20)
       + (scores[5]::numeric / 25 * 30) + (scores[6]::numeric / 25 * 20)
@@ -1479,7 +1482,359 @@ grant execute on function public.can_manage_questionnaire(uuid) to authenticated
 grant execute on function public.version_is_editable(uuid) to authenticated;
 grant execute on function public.can_access_questionnaire(uuid) to authenticated;
 
+-- ===== supabase/migrations/005_employee_directory.sql =====
+
+create table public.employee_directory (
+  id uuid primary key default gen_random_uuid(),
+  nome text not null,
+  email text,
+  matricula text,
+  perfil text,
+  ativo boolean not null default true,
+  auth_user_id uuid unique references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  constraint employee_directory_email_not_blank check (email is null or length(trim(email)) > 0),
+  constraint employee_directory_matricula_not_blank check (matricula is null or length(trim(matricula)) > 0)
+);
+
+create unique index employee_directory_email_unique
+  on public.employee_directory (lower(trim(email)))
+  where email is not null;
+create unique index employee_directory_matricula_unique
+  on public.employee_directory (lower(trim(matricula)))
+  where matricula is not null;
+
+alter table public.employee_directory enable row level security;
+create policy employee_directory_admin_manage on public.employee_directory for all to authenticated
+using ((select public.is_admin())) with check ((select public.is_admin()));
+revoke all on public.employee_directory from anon, authenticated;
+grant select, insert, update, delete on public.employee_directory to authenticated;
+
+create or replace function public.search_employee_directory(p_query text)
+returns table(
+  employee_id uuid,
+  name text,
+  email text,
+  employee_number text,
+  profile text,
+  has_account boolean,
+  has_password boolean,
+  email_confirmed boolean
+)
+language sql stable security definer set search_path = '' as $$
+  with input as (select lower(trim(coalesce(p_query, ''))) as term)
+  select e.id, e.nome, e.email, e.matricula, e.perfil,
+    exists (select 1 from auth.users u where lower(u.email) = lower(e.email)) as has_account,
+    exists (select 1 from auth.users u
+      where lower(u.email) = lower(e.email) and nullif(u.encrypted_password, '') is not null) as has_password,
+    exists (select 1 from auth.users u
+      where lower(u.email) = lower(e.email) and u.email_confirmed_at is not null) as email_confirmed
+  from public.employee_directory e cross join input
+  where e.ativo and length(input.term) between 3 and 120 and (
+    position(input.term in lower(e.nome)) > 0 or
+    position(input.term in lower(coalesce(e.email, ''))) > 0 or
+    position(input.term in lower(coalesce(e.matricula, ''))) > 0
+  )
+  order by case
+      when lower(coalesce(e.email, '')) = input.term then 0
+      when lower(coalesce(e.matricula, '')) = input.term then 1
+      else 2
+    end, e.nome
+  limit 8;
+$$;
+revoke all on function public.search_employee_directory(text) from public;
+grant execute on function public.search_employee_directory(text) to anon, authenticated;
+
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare
+  employee_id uuid;
+  employee_name text;
+  employee_number text;
+  employee_profile text;
+begin
+  select e.id, e.nome, e.matricula, e.perfil
+  into employee_id, employee_name, employee_number, employee_profile
+  from public.employee_directory e
+  where e.ativo and lower(trim(e.email)) = lower(trim(new.email))
+  for update;
+
+  insert into public.profiles(id, nome, email, matricula, funcao, role, status, ativo, created_by)
+  values (
+    new.id,
+    coalesce(employee_name, new.raw_user_meta_data ->> 'name', new.raw_user_meta_data ->> 'full_name', ''),
+    coalesce(new.email, ''),
+    employee_number,
+    employee_profile,
+    'participant',
+    'invited',
+    false,
+    null
+  )
+  on conflict (id) do update set email = excluded.email;
+
+  if employee_id is not null then
+    update public.employee_directory set auth_user_id = new.id
+    where id = employee_id and (auth_user_id is null or auth_user_id = new.id);
+  end if;
+
+  if new.email_confirmed_at is not null then
+    perform public.accept_invitation_for_user(new.id, new.email);
+    update public.profiles p set status = 'active', ativo = true
+    where p.id = new.id and p.status = 'invited'
+      and exists (select 1 from public.employee_directory e where e.auth_user_id = new.id and e.ativo);
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.accept_confirmed_user_invitation()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if old.email_confirmed_at is null and new.email_confirmed_at is not null then
+    perform public.accept_invitation_for_user(new.id, new.email);
+    update public.profiles p set status = 'active', ativo = true
+    where p.id = new.id and p.status = 'invited'
+      and exists (select 1 from public.employee_directory e where e.auth_user_id = new.id and e.ativo);
+  end if;
+  return new;
+end;
+$$;
+
+update public.employee_directory e
+set auth_user_id = u.id
+from auth.users u
+where e.auth_user_id is null
+  and e.ativo
+  and lower(trim(e.email)) = lower(trim(u.email))
+  and not exists (
+    select 1 from public.employee_directory linked
+    where linked.auth_user_id = u.id
+  );
+
+update public.profiles p
+set nome = e.nome,
+    matricula = e.matricula,
+    funcao = e.perfil,
+    status = case when u.email_confirmed_at is not null then 'active' else p.status end,
+    ativo = case when u.email_confirmed_at is not null then true else p.ativo end
+from public.employee_directory e
+join auth.users u on u.id = e.auth_user_id
+where p.id = u.id;
+
+
+-- ===== supabase/migrations/006_employee_directory_work_fields.sql =====
+
+alter table public.employee_directory
+  add column if not exists horario_trabalho text,
+  add column if not exists local_trabalho text;
+
+
+-- ===== supabase/migrations/007_fix_assessment_completion_order.sql =====
+
+do $migration$
+declare
+  function_definition text;
+  broken_order_clause constant text := 'order by total desc, case codigo';
+  fixed_order_clause constant text := 'order by d.total desc, case d.codigo';
+begin
+  select pg_get_functiondef(to_regprocedure('public.complete_assessment(uuid)'))
+  into function_definition;
+
+  if function_definition is null then
+    raise exception 'public.complete_assessment(uuid) was not found.';
+  end if;
+
+  if position(broken_order_clause in function_definition) > 0 then
+    execute replace(function_definition, broken_order_clause, fixed_order_clause);
+  elsif position(fixed_order_clause in function_definition) = 0 then
+    raise exception 'The expected profile ordering clause was not found in complete_assessment.';
+  end if;
+end;
+$migration$;
+
+
+-- ===== supabase/migrations/008_results_dashboard_access.sql =====
+
+create table public.disc_profile_catalog (
+  code text primary key check (code in ('D', 'I', 'S', 'C')),
+  name text not null,
+  description text not null,
+  traits text[] not null default '{}',
+  color text not null check (color ~ '^#[0-9A-Fa-f]{6}$'),
+  sort_order smallint not null,
+  action_recommendation text not null
+);
+
+alter table public.disc_profile_catalog enable row level security;
+create policy disc_profile_catalog_read on public.disc_profile_catalog
+  for select to authenticated using (true);
+revoke all on public.disc_profile_catalog from anon, authenticated;
+grant select on public.disc_profile_catalog to authenticated;
+
+insert into public.disc_profile_catalog (code, name, description, traits, color, sort_order, action_recommendation)
+values
+  ('D', 'Perfil Dominante', 'Tende a tomar iniciativa, decidir com agilidade e buscar soluções orientadas a resultados.', array['Direto', 'Decidido', 'Proativo', 'Resolutivo'], '#F05E61', 1, 'Liderança de DDS, coordenação de melhorias'),
+  ('I', 'Perfil Influente', 'Tende a compartilhar informações, mobilizar pessoas e contribuir para a comunicação da equipe.', array['Comunicativo', 'Colaborativo', 'Entusiasta', 'Agregador'], '#F6CA56', 2, 'Multiplicador de treinamentos e integração'),
+  ('S', 'Perfil Estável', 'Demonstra constância, confiabilidade e foco em manter um ambiente de trabalho harmonioso.', array['Calmo', 'Colaborativo', 'Confiável', 'Persistente'], '#18A66A', 3, 'Padronização operacional e mentorias'),
+  ('C', 'Perfil Conforme', 'Tende a valorizar precisão, análise de riscos, qualidade e cumprimento cuidadoso de procedimentos.', array['Analítico', 'Preciso', 'Cuidadoso', 'Criterioso'], '#408AE5', 4, 'Auditorias, qualidade e análise de riscos')
+on conflict (code) do update set
+  name = excluded.name,
+  description = excluded.description,
+  traits = excluded.traits,
+  color = excluded.color,
+  sort_order = excluded.sort_order,
+  action_recommendation = excluded.action_recommendation;
+
+create or replace function public.can_view_assessment(p_assessment_id uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from public.assessments a
+    where a.id = p_assessment_id and (
+      a.user_id = (select auth.uid())
+      or (select public.is_admin())
+      or (a.status = 'concluida' and (select public.is_manager()) and exists (
+        select 1 from public.team_members tm
+        where tm.user_id = a.user_id and tm.active and (select public.manages_team(tm.team_id))
+      ))
+    )
+  );
+$$;
+
+create or replace function public.can_view_question(p_question_id uuid)
+returns boolean language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1
+    from public.questions q
+    join public.assessments a on
+      a.questionnaire_version_id is null
+      or exists (
+        select 1 from public.questionnaire_sections s
+        where s.id = q.section_id and s.version_id = a.questionnaire_version_id
+      )
+    where q.id = p_question_id and (select public.can_view_assessment(a.id))
+  );
+$$;
+
+create or replace function public.team_assessment_progress(p_team_id uuid default null)
+returns table (
+  team_id uuid,
+  team_name text,
+  user_id uuid,
+  participant_name text,
+  matricula text,
+  funcao text,
+  assessment_id uuid,
+  status text,
+  answered_required integer,
+  total_required integer,
+  completion_percent integer,
+  concluded_at timestamptz
+)
+language sql stable security definer set search_path = '' as $$
+  with active_members as (
+    select distinct tm.team_id, tm.user_id
+    from public.team_members tm
+    join public.teams t on t.id = tm.team_id and t.active
+    where tm.active
+      and (p_team_id is null or tm.team_id = p_team_id)
+      and ((select public.is_admin()) or ((select public.is_manager()) and (select public.manages_team(tm.team_id))))
+  )
+  select
+    t.id,
+    t.name,
+    p.id,
+    p.nome,
+    p.matricula,
+    p.funcao,
+    latest.id,
+    latest.status,
+    coalesce(progress.answered_required, 0)::integer,
+    coalesce(progress.total_required, 0)::integer,
+    case
+      when latest.id is null then 0
+      when latest.status = 'concluida' then 100
+      when coalesce(progress.total_required, 0) = 0 then 0
+      else least(100, floor(100.0 * progress.answered_required / progress.total_required)::integer)
+    end,
+    latest.concluida_em
+  from active_members member
+  join public.teams t on t.id = member.team_id
+  join public.profiles p on p.id = member.user_id
+  left join lateral (
+    select a.id, a.status, a.concluida_em, a.questionnaire_version_id
+    from public.assessments a
+    where a.user_id = member.user_id and a.status <> 'cancelada'
+    order by a.created_at desc
+    limit 1
+  ) latest on true
+  left join lateral (
+    select
+      (count(q.id) filter (where q.obrigatoria))::integer as total_required,
+      (count(q.id) filter (
+        where q.obrigatoria and (
+          (q.tipo = 'texto' and text_answer.id is not null and length(trim(text_answer.answer_text)) > 0)
+          or (q.tipo <> 'texto' and answer.id is not null and (
+            answer.score is not null or answer.selected_option_id is not null or answer.numeric_value is not null
+            or answer.boolean_value is not null or answer.date_value is not null
+          ))
+        )
+      ))::integer as answered_required
+    from public.questions q
+    left join public.answers answer on answer.assessment_id = latest.id and answer.question_id = q.id
+    left join public.text_answers text_answer on text_answer.assessment_id = latest.id and text_answer.question_id = q.id
+    where latest.id is not null and q.ativa and (
+      latest.questionnaire_version_id is null
+      or exists (
+        select 1 from public.questionnaire_sections s
+        where s.id = q.section_id and s.version_id = latest.questionnaire_version_id
+      )
+    )
+  ) progress on true
+  order by t.name, p.nome;
+$$;
+
+revoke all on function public.can_view_assessment(uuid) from public, anon;
+revoke all on function public.can_view_question(uuid) from public, anon;
+revoke all on function public.team_assessment_progress(uuid) from public, anon;
+grant execute on function public.can_view_assessment(uuid) to authenticated;
+grant execute on function public.can_view_question(uuid) to authenticated;
+grant execute on function public.team_assessment_progress(uuid) to authenticated;
+
+drop policy results_read_by_campaign_visibility on public.assessment_results;
+create policy assessment_results_read_scoped on public.assessment_results
+  for select to authenticated using ((select public.can_view_assessment(assessment_id)));
+
+drop policy questionnaire_results_read_admin on public.questionnaire_results;
+create policy questionnaire_results_read_scoped on public.questionnaire_results
+  for select to authenticated using ((select public.can_view_assessment(assessment_id)));
+
+drop policy answers_read_owner_or_admin on public.answers;
+create policy answers_read_scoped on public.answers
+  for select to authenticated using ((select public.can_view_assessment(assessment_id)));
+
+drop policy text_answers_read_owner_or_admin on public.text_answers;
+create policy text_answers_read_scoped on public.text_answers
+  for select to authenticated using ((select public.can_view_assessment(assessment_id)));
+
+drop policy answer_options_read_owner_or_admin on public.answer_option_selections;
+create policy answer_options_read_scoped on public.answer_option_selections
+  for select to authenticated using (exists (
+    select 1 from public.answers a
+    where a.id = answer_option_selections.answer_id
+      and (select public.can_view_assessment(a.assessment_id))
+  ));
+
+create policy questions_read_assessment_scope on public.questions
+  for select to authenticated using ((select public.can_view_question(id)));
+
+create policy options_read_assessment_scope on public.question_options
+  for select to authenticated using ((select public.can_view_question(question_id)));
+
+
 -- ===== supabase/seed.sql =====
+
+begin;
 
 insert into public.assessment_cycles (titulo, descricao, data_inicio, ativo)
 values ('Avaliação DISC e Competências Operacionais', 'Ciclo inicial de autoavaliação comportamental e operacional.', now(), true)
@@ -1565,7 +1920,9 @@ where t.codigo = 'COM'
       and (existing.theme_id = t.id or existing.dimension_code = 'REF')
   );
 
+commit;
 
+begin;
 
 insert into public.questionnaires (title, description, slug, owner_id, status, visibility, settings)
 values ('DISC e Competências Operacionais', 'Modelo inicial com autoavaliação comportamental e competências operacionais.',
@@ -1638,4 +1995,4 @@ where lower(c.titulo) = lower('Avaliação DISC e Competências Operacionais')
 on conflict (assessment_cycle_id) do update set questionnaire_version_id = excluded.questionnaire_version_id,
   status = 'active', result_visibility = 'admin';
 
-COMMIT;
+commit;

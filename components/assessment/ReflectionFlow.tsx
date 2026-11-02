@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Save } from "lucide-react";
 import type { Question } from "@/lib/database.types";
 import { saveTextAnswerAction } from "@/app/assessment-actions";
+import { QuestionProgress } from "@/components/assessment/QuestionProgress";
+import { QuestionSpeech, speakQuestion } from "@/components/assessment/QuestionSpeech";
 
 type TextAnswer = { question_id: string; answer_text: string };
 
@@ -44,34 +46,44 @@ export function ReflectionFlow({ assessmentId, questions, answers, startQuestion
   const next = () => {
     if (!canContinue || dirty[current.id] || pending) return;
     if (index === textQuestions.length - 1) router.push("/revisao");
-    else { setIndex((value) => value + 1); setMessage(""); setError(""); }
+    else {
+      const nextQuestion = textQuestions[index + 1];
+      speakQuestion(nextQuestion.id, nextQuestion.texto);
+      setIndex((value) => value + 1);
+      setMessage("");
+      setError("");
+    }
   };
   const back = () => {
     if (index === 0) router.push("/avaliacao");
-    else { setIndex((value) => value - 1); setMessage(""); setError(""); }
+    else {
+      const previousQuestion = textQuestions[index - 1];
+      speakQuestion(previousQuestion.id, previousQuestion.texto);
+      setIndex((value) => value - 1);
+      setMessage("");
+      setError("");
+    }
   };
-  const progress = Math.round(((scaleCount + index + 1) / totalCount) * 100);
-
   return (
-    <div style={{ maxWidth: 850, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)" }}><span>Autoavaliação reflexiva</span><span>{scaleCount + index + 1} de {totalCount}</span></div>
-      <div role="progressbar" aria-label="Progresso da avaliação" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} style={{ height: 5, marginTop: 10, background: "#dce4ef", borderRadius: 8 }}><div style={{ width: `${progress}%`, height: "100%", background: "var(--blue)", borderRadius: 8 }} /></div>
-      <section className="surface" style={{ marginTop: 28, padding: "clamp(23px, 5vw, 44px)" }}>
+    <div className="question-flow">
+      <QuestionProgress label="Autoavaliação reflexiva" current={scaleCount + index + 1} total={totalCount} ariaLabel="Progresso da autoavaliação" />
+      <section className="surface question-card">
         <p className="eyebrow">Reflexão {index + 1} de {textQuestions.length}</p>
-        <label htmlFor="reflection-answer" style={{ display: "block", maxWidth: 700, margin: "14px auto 22px", textAlign: "center", font: "600 clamp(22px, 4vw, 30px) 'Space Grotesk', sans-serif", lineHeight: 1.35 }}>{current.texto}</label>
-        <textarea id="reflection-answer" className="field" rows={7} maxLength={10000} value={answer} onChange={(event) => {
+        <label htmlFor="reflection-answer" className="question-text question-text-label">{current.texto}</label>
+        <QuestionSpeech questionId={current.id} text={current.texto} />
+        <textarea id="reflection-answer" rows={7} maxLength={10000} value={answer} onChange={(event) => {
           setValues((state) => ({ ...state, [current.id]: event.target.value }));
           setDirty((state) => ({ ...state, [current.id]: true }));
           setMessage("Salvando automaticamente...");
           setError("");
-        }} placeholder="Escreva sua resposta..." style={{ padding: 14, resize: "vertical", minHeight: 180, lineHeight: 1.6 }} />
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, minHeight: 20, fontSize: 11, color: error ? "var(--red)" : "var(--muted)" }}><span aria-live="polite">{error || (message && <><Save size={12} style={{ verticalAlign: "middle", marginRight: 5 }} />{message}</>)}</span><span>{answer.length}/10000</span></div>
+        }} placeholder="Escreva sua resposta..." className="field reflection-answer" />
+        <div className={`reflection-feedback${error ? " is-error" : ""}`}><span aria-live="polite">{error || (message && <><Save size={13} />{message}</>)}</span><span>{answer.length}/10000</span></div>
       </section>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 18 }}>
+      <div className="question-navigation">
         <button type="button" className="button-secondary" onClick={back}><ArrowLeft size={15} /> Voltar</button>
         <button type="button" className="button-primary" disabled={!canContinue || dirty[current.id] || pending} onClick={next}>{index === textQuestions.length - 1 ? "Revisar avaliação" : "Próxima reflexão"} {index === textQuestions.length - 1 ? <Check size={15} /> : <ArrowRight size={15} />}</button>
       </div>
-      <p className="muted" style={{ textAlign: "center", fontSize: 11, marginTop: 24 }}>As respostas abertas apoiam sua reflexão e não recebem pontuação.</p>
+      <p className="question-disclaimer">As respostas abertas apoiam sua reflexão e não recebem pontuação.</p>
     </div>
   );
 }

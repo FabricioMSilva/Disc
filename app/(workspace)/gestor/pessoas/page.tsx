@@ -1,8 +1,8 @@
-import { requireManager } from "@/lib/auth";
+import { requireTeamManager } from "@/lib/auth";
 import { InvitationForm } from "@/components/people/InvitationForm";
 
 export default async function ManagerPeoplePage() {
-  const { supabase, user } = await requireManager();
+  const { supabase, user } = await requireTeamManager();
   const now = new Date().toISOString();
   const { data: assignments } = await supabase.from("manager_team_assignments").select("team_id")
     .eq("manager_id", user.id).eq("active", true).lte("valid_from", now).or(`valid_until.is.null,valid_until.gt.${now}`);

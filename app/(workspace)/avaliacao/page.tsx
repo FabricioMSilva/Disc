@@ -14,5 +14,13 @@ export default async function AssessmentPage({ searchParams }: { searchParams: P
   if (!scaleQuestions.length) redirect(structured.length ? "/perguntas" : textQuestions.length ? "/reflexao" : "/revisao");
   if (!missingRequired && !params.pergunta) redirect(structured.length ? "/perguntas" : textQuestions.length ? "/reflexao" : "/revisao");
   const nextPath = structured.length ? "/perguntas" : textQuestions.length ? "/reflexao" : "/revisao";
-  return <><p className="eyebrow">Avaliação em andamento</p><h1 className="page-title">Comportamentos e competências</h1><p className="page-subtitle" style={{ marginBottom: 26 }}>Uma pergunta por vez, com salvamento automático.</p><QuestionFlow assessmentId={assessment.id} questions={scaleQuestions} themes={themes} answers={answers} startQuestionId={params.pergunta} nextPath={nextPath} /></>;
+  const nextQuestion = structured[0] ?? textQuestions[0];
+  return <div className="assessment-page">
+    <header className="assessment-heading">
+      <p className="eyebrow">Avaliação em andamento</p>
+      <h1 className="page-title assessment-title">Comportamentos e competências</h1>
+      <p className="page-subtitle">Responda de acordo com o comportamento que mais representa sua percepção.</p>
+    </header>
+    <QuestionFlow assessmentId={assessment.id} questions={scaleQuestions} themes={themes} answers={answers} startQuestionId={params.pergunta} nextPath={nextPath} nextQuestion={nextQuestion} />
+  </div>;
 }

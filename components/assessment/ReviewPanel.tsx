@@ -25,6 +25,7 @@ export function ReviewPanel({ assessmentId, questions, themes, answers, textAnsw
   const reflections = new Map(textAnswers.map((answer) => [answer.question_id, answer.answer_text]));
   const submit = () => {
     if (!window.confirm("Enviar sua avaliação? Depois do envio, as respostas não poderão ser alteradas.")) return;
+    setError("");
     startTransition(async () => {
       const result = await completeAssessmentAction(assessmentId);
       if (result?.error) setError(result.error); else router.push("/fim");

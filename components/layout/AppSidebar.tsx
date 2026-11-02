@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { BrandLogo } from "@/components/layout/BrandLogo";
 import {
   Activity, Archive, ClipboardList, FilePlus2, Gauge, History, LayoutDashboard,
-  ListChecks, LockKeyhole, Settings2, Shield, Users, UsersRound, UserRound,
+  ListChecks, LockKeyhole, Settings2, Shield, Users, UsersRound,
 } from "lucide-react";
 
 type Role = "super_admin" | "admin" | "manager" | "questionnaire_editor" | "participant" | "auditor";
@@ -12,18 +13,16 @@ type Item = { href: string; label: string; icon: typeof LayoutDashboard };
 
 const navigation: Record<Role, Item[]> = {
   participant: [
-    { href: "/painel", label: "Meu painel", icon: LayoutDashboard },
-    { href: "/avaliacoes", label: "Minhas avaliações", icon: ClipboardList },
-    { href: "/historico", label: "Meu histórico", icon: History },
-    { href: "/perfil", label: "Meu perfil", icon: UserRound },
+    { href: "/painel", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/avaliacoes", label: "Minha Avaliação", icon: ClipboardList },
+    { href: "/historico", label: "Meus Resultados", icon: History },
   ],
   manager: [
-    { href: "/gestor", label: "Visão geral", icon: Gauge },
-    { href: "/gestor/equipe", label: "Minha equipe", icon: UsersRound },
-    { href: "/gestor/pessoas", label: "Pessoas", icon: Users },
-    { href: "/campanhas", label: "Campanhas", icon: Activity },
-    { href: "/questionarios", label: "Questionários", icon: ListChecks },
-    { href: "/resultados", label: "Resultados", icon: ClipboardList },
+    { href: "/painel", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/avaliacoes", label: "Minha Avaliação", icon: ClipboardList },
+    { href: "/historico", label: "Meus Resultados", icon: History },
+    { href: "/gestor", label: "Dashboard da equipe", icon: Gauge },
+    { href: "/gestor/equipe", label: "Equipe", icon: UsersRound },
   ],
   questionnaire_editor: [
     { href: "/questionarios", label: "Questionários", icon: ListChecks },
@@ -57,7 +56,7 @@ export function AppSidebar({ role }: { role: string }) {
   const items = navigation[role as Role] ?? navigation.participant;
   return (
     <aside className="sidebar">
-      <Link href="/painel" className="brand"><span className="brand-mark">P</span><span>PEOPLE INSIGHTS</span></Link>
+      <BrandLogo href="/painel" variant="sidebar" />
       <nav className="nav-section" aria-label="Navegação principal">
         <p className="nav-label">Workspace</p>
         {items.map(({ href, label, icon: Icon }) => {

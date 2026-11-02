@@ -68,10 +68,28 @@ export async function completeAssessmentAction(assessmentId: string) {
   if (!parsed.success) return { error: "Avaliação inválida." };
   const { supabase } = await requireUser();
   const { error } = await supabase.rpc("complete_assessment", { p_assessment_id: parsed.data });
-  if (error) return { error: error.message.includes("perguntas obrigatórias")
-    ? "Preencha todas as respostas obrigatórias antes do envio."
-    : "Não foi possível concluir. Atualize a página e tente novamente." };
-  redirect("/fim");
+  if (error) {
+    console.error("complete_assessment RPC failed", { code: error.code, message: error.message });
+    const message = error.message.toLocaleLowerCase("pt-BR");
+    if (message.includes("perguntas obrigatórias")) {
+      return { error: "Preencha todas as respostas obrigatórias antes do envio." };
+    }
+    if (message.includes("configuração disc inválida")) {
+      return { error: "Não foi possível gerar o resultado DISC. A configuração do questionário precisa ser revisada pelo administrador." };
+    }
+    if (message.includes("avaliação indisponível para envio")) {
+      return { error: "Esta avaliação não está mais em andamento. Atualize o painel para verificar o status." };
+    }
+    if (error.code === "42702" && message.includes("total")) {
+      return { error: "O banco ainda está com uma função de conclusão desatualizada. Aplique a migração 007 no Supabase e tente novamente." };
+    }
+    return {
+      error: process.env.NODE_ENV === "development"
+        ? `Falha ao concluir (${error.code}): ${error.message}`
+        : "Não foi possível concluir a avaliação. Tente novamente ou procure o administrador.",
+    };
+  }
+  redirect(`/resultados/${parsed.data}`);
 }
 
 export async function getAssessmentSnapshot() {
