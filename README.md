@@ -55,6 +55,11 @@ No ambiente de teste, depois que os dois perfis existirem, `supabase/operations/
 
 ## Perfis e acesso
 
+As páginas iniciais de administrador e gestor incluem um cartão de avaliação
+pessoal. O cartão consulta somente a avaliação mais recente da própria conta e
+oferece iniciar, retomar ou consultar o resultado, sem usar os dados demonstrativos
+da prévia administrativa.
+
 A página Pessoas não exige convites: administradores e gestores acompanham
 integrantes e horários, enquanto a liberação e o vínculo à equipe ocorrem
 automaticamente no acesso. Os registros de convites existentes são preservados
