@@ -36,6 +36,9 @@ const navigation: Record<Role, Item[]> = {
     { href: "/admin", label: "Início", icon: Gauge },
     { href: "/admin/pessoas", label: "Pessoas", icon: Users },
     { href: "/admin/resultados", label: "Resultados", icon: ClipboardList },
+    { href: "/avaliacoes", label: "Minha avaliação", icon: ClipboardList },
+    { href: "/historico", label: "Meu resultado", icon: History },
+    { href: "/gestor/pessoas", label: "Pessoas da equipe", icon: UsersRound },
   ],
   auditor: [{ href: "/admin/auditoria", label: "Auditoria", icon: Archive }],
 };

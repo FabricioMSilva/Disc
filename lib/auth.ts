@@ -35,6 +35,6 @@ export async function requireManager() {
 
 export async function requireTeamManager() {
   const session = await requireUser();
-  if (session.profile?.role !== "manager") redirect("/acesso-negado");
+  if (!session.profile || !["manager", "super_admin"].includes(session.profile.role)) redirect("/acesso-negado");
   return session;
 }

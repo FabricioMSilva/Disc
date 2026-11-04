@@ -5,14 +5,19 @@ import { WorkScheduleEditor } from "@/components/people/WorkScheduleEditor";
 import { PersonalAssessmentCard } from "@/components/assessment/PersonalAssessmentCard";
 
 export default async function ManagerPeoplePage() {
-  const { supabase, user } = await requireTeamManager();
+  const { supabase, user, profile } = await requireTeamManager();
+  const isSuperAdmin = profile.role === "super_admin";
   const now = new Date().toISOString();
-  const { data: assignments, error: assignmentError } = await supabase.from("manager_team_assignments").select("team_id")
-    .eq("manager_id", user.id).eq("active", true).lte("valid_from", now).or(`valid_until.is.null,valid_until.gt.${now}`);
+  const { data: assignments, error: assignmentError } = isSuperAdmin
+    ? { data: [], error: null }
+    : await supabase.from("manager_team_assignments").select("team_id")
+      .eq("manager_id", user.id).eq("active", true).lte("valid_from", now).or(`valid_until.is.null,valid_until.gt.${now}`);
   if (assignmentError) throw new Error(`Não foi possível carregar as equipes vinculadas: ${assignmentError.message}`);
-  const teamIds = [...new Set((assignments ?? []).map((assignment) => assignment.team_id))];
+  const assignedTeamIds = [...new Set((assignments ?? []).map((assignment) => assignment.team_id))];
   const [{ data: teams, error: teamsError }, { data: progress, error: progressError }, { data: schedules, error: schedulesError }] = await Promise.all([
-    teamIds.length ? supabase.from("teams").select("id,name").in("id", teamIds) : Promise.resolve({ data: [], error: null }),
+    isSuperAdmin
+      ? supabase.from("teams").select("id,name").eq("active", true)
+      : assignedTeamIds.length ? supabase.from("teams").select("id,name").in("id", assignedTeamIds) : Promise.resolve({ data: [], error: null }),
     supabase.rpc("team_assessment_progress", { p_team_id: null }),
     supabase.rpc("team_member_work_schedules", { p_team_id: null }),
   ]);
@@ -20,6 +25,7 @@ export default async function ManagerPeoplePage() {
   if (progressError) throw new Error(`Não foi possível carregar o progresso da equipe: ${progressError.message}`);
   if (schedulesError) throw new Error(`Não foi possível carregar os horários de trabalho: ${schedulesError.message}`);
 
+  const teamIds = isSuperAdmin ? (teams ?? []).map((team) => team.id) : assignedTeamIds;
   const rows = (progress ?? []).filter((row) => teamIds.includes(row.team_id));
   const memberRows = [...new Map(rows.map((row) => [row.user_id, row])).values()];
   const completed = memberRows.filter((member) => member.status === "concluida").length;
