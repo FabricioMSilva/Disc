@@ -111,6 +111,9 @@ relatório usam esse conteúdo, sem migração SQL. Cada alternativa continua sa
 somente seu valor de 1 a 5 no modelo existente. A numeração interna determina o
 conteúdo, independentemente da ordem embaralhada; as categorias não são mostradas
 no questionário. Todas as 40 perguntas usam alternativas específicas da situação.
+As alternativas aparecem sem números e em ordem embaralhada por avaliação e
+pergunta, estável ao voltar, recarregar ou retomar. O valor original de cada
+alternativa é preservado independentemente da posição exibida.
 Alterar esses textos não converte respostas já salvas: os valores numéricos
 existentes permanecem os mesmos.
 

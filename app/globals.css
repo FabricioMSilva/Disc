@@ -211,11 +211,9 @@ html[data-theme="dark"] .scale-option[aria-checked="true"] { background: #18395a
 .scale-option:last-child { grid-column: auto; justify-self: stretch; width: auto; }
 .scale-option-input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); clip-path: inset(50%); white-space: nowrap; }
 .scale-option-card { position: relative; display: flex; min-height: 84px; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 13px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); text-align: center; transition: background .18s, border-color .18s, box-shadow .18s, transform .18s; }
-.scale-option-number { display: grid; width: 27px; height: 27px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: color-mix(in srgb, var(--page) 75%, var(--surface)); color: var(--muted); font-size: 11px; font-weight: 700; transition: background .18s, border-color .18s, color .18s; }
 .scale-option-label { font-size: 12px; font-weight: 600; line-height: 1.35; }
 .scale-option-check { position: absolute; top: 7px; right: 7px; display: grid; width: 18px; height: 18px; place-items: center; border-radius: 50%; background: var(--blue); color: white; opacity: 0; transform: scale(.8); transition: opacity .16s, transform .16s; }
 .scale-option-input:checked + .scale-option-card { border-color: var(--blue); background: var(--blue-soft); box-shadow: 0 7px 20px color-mix(in srgb, var(--blue) 12%, transparent); }
-.scale-option-input:checked + .scale-option-card .scale-option-number { border-color: var(--blue); background: var(--blue); color: white; }
 .scale-option-input:checked + .scale-option-card .scale-option-label { color: var(--blue); }
 .scale-option-input:checked + .scale-option-card .scale-option-check { opacity: 1; transform: scale(1); }
 .scale-option-input:focus-visible + .scale-option-card { outline: 3px solid color-mix(in srgb, var(--blue) 45%, transparent); outline-offset: 3px; }

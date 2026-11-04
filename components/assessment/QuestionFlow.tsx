@@ -116,7 +116,7 @@ export function QuestionFlow({ assessmentId, questions, answers, startQuestionId
         <h2 className="question-text">{current.texto}</h2>
         <QuestionSpeech questionId={current.id} text={current.texto} />
         <p className="question-helper">{current.responseLabels ? "Escolha a resposta que melhor descreve como você costuma agir nessa situação." : "Indique o quanto você se identifica com a situação apresentada."}</p>
-        <ScaleOptions questionId={current.id} value={saved[current.id]} onChange={handleAnswer} disabled={pending} responseLabels={current.responseLabels} />
+        <ScaleOptions assessmentId={assessmentId} questionId={current.id} value={saved[current.id]} onChange={handleAnswer} disabled={pending} responseLabels={current.responseLabels} />
         <div className={`question-feedback${error ? " is-error" : ""}`} aria-live="polite">{error || (status && <><Save size={13} />{status}</>)}</div>
       </motion.section>
       <div className="question-navigation">
