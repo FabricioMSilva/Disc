@@ -20,22 +20,41 @@ export default async function AdminResultsPage({ searchParams }: { searchParams:
   if (["iniciada", "em_andamento", "concluida", "cancelada"].includes(params.status ?? "")) query = query.eq("status", params.status!);
   if (params.inicio && !Number.isNaN(Date.parse(params.inicio))) query = query.gte("iniciada_em", new Date(params.inicio).toISOString());
   if (params.fim && !Number.isNaN(Date.parse(params.fim))) query = query.lte("iniciada_em", new Date(`${params.fim}T23:59:59`).toISOString());
-  const [{ data: rows, count }, { data: teamProgress, error: progressError }] = await Promise.all([
+  const [{ data: rows, count, error: resultsError }, { data: teamProgress, error: progressError }] = await Promise.all([
     query.range(0, 99),
     supabase.rpc("team_assessment_progress", { p_team_id: null }),
   ]);
+  if (resultsError) throw new Error(`Não foi possível carregar os resultados: ${resultsError.message}`);
   if (progressError) throw new Error(`Não foi possível carregar o progresso das equipes: ${progressError.message}`);
   const results = rows ?? [];
   const progressRows = (teamProgress ?? []).filter((row) => !params.equipe || row.team_name === params.equipe);
   const completed = results.filter((row) => row.status === "concluida");
   const averages = dimensions.map(([field, label]) => {
     const values = completed.map((row) => row[field]).filter((value): value is number => value !== null);
-    return { label, value: values.length ? (values.reduce((sum, item) => sum + item, 0) / values.length).toFixed(1) : "--" };
+    const averagePoints = values.length ? values.reduce((sum, item) => sum + item, 0) / values.length : null;
+    return { label, averagePoints, answerAverage: averagePoints === null ? null : averagePoints / 5, count: values.length };
   });
   const teams = [...new Set([...results.map((row) => row.equipe), ...(teamProgress ?? []).map((row) => row.team_name)].filter((team): team is string => Boolean(team)))];
   return <>
     <p className="eyebrow">Análise e desenvolvimento</p><h1 className="page-title">Resultados</h1><p className="page-subtitle">Resultados individuais autorizados, sempre apresentados como autopercepção e indicadores de desenvolvimento.</p>
-    <div className="kpi-grid">{averages.map((item) => <div key={item.label} className="surface kpi"><span className="kpi-label">Média · {item.label}</span><p className="kpi-value">{item.value}</p></div>)}</div>
+    <p className="muted" style={{ fontSize: 12 }}>Cada dimensão reúne 5 perguntas de 1 a 5: o total vai de 5 a 25 pontos. As médias abaixo consideram somente as avaliações concluídas entre os até 100 registros exibidos, conforme os filtros.</p>
+    <div className="kpi-grid">{averages.map((item, index) => {
+      const color = ["#F05E61", "#C59B27", "#0A9F68", "#1473E6"][index % 4];
+      const pointsLabel = item.averagePoints?.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      const meanLabel = item.answerAverage?.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+      return <article key={item.label} className="surface kpi">
+        <span className="kpi-label">{item.label}</span>
+        <p className="kpi-value">{pointsLabel ?? "—"} <span style={{ fontSize: 14, fontWeight: 500, color: "var(--muted)" }}>/ 25 pontos</span></p>
+        {item.averagePoints !== null ? <>
+          <div className="report-progress-track" role="progressbar" aria-label={`${item.label}: média de ${pointsLabel} de 25 pontos`} aria-valuenow={item.averagePoints} aria-valuemin={0} aria-valuemax={25} aria-valuetext={`${pointsLabel} de 25 pontos; média das respostas ${meanLabel} de 5`}>
+            <span style={{ width: `${item.averagePoints / 25 * 100}%`, background: color }} />
+          </div>
+          <div className="muted" style={{ display: "flex", justifyContent: "space-between", marginTop: 5, fontSize: 10 }}><span>0</span><span>Máximo: 25</span></div>
+          <p style={{ margin: "12px 0 5px", fontSize: 12 }}>Média das respostas: <strong>{meanLabel} / 5</strong></p>
+          <span className="muted" style={{ fontSize: 10 }}>Média dos totais de {item.count} {item.count === 1 ? "avaliação concluída" : "avaliações concluídas"}</span>
+        </> : <p className="muted" style={{ fontSize: 12 }}>Sem avaliações concluídas para esta dimensão.</p>}
+      </article>;
+    })}</div>
     <form method="get" className="surface results-filters" style={{ padding: 14, display: "flex", flexWrap: "wrap", gap: 9, alignItems: "end" }}><div><label className="field-label" htmlFor="team-filter">Equipe</label><select className="field" name="equipe" id="team-filter" defaultValue={params.equipe ?? ""}><option value="">Todas</option>{teams.map((team) => <option key={team} value={team}>{team}</option>)}</select></div><div><label className="field-label" htmlFor="status-filter">Status</label><select className="field" name="status" id="status-filter" defaultValue={params.status ?? ""}><option value="">Todos</option><option value="iniciada">Iniciada</option><option value="em_andamento">Em andamento</option><option value="concluida">Concluída</option></select></div><div><label className="field-label" htmlFor="start-filter">De</label><input className="field" type="date" name="inicio" id="start-filter" defaultValue={params.inicio} /></div><div><label className="field-label" htmlFor="end-filter">Até</label><input className="field" type="date" name="fim" id="end-filter" defaultValue={params.fim} /></div><button className="button-primary">Filtrar</button></form>
     <section className="surface" style={{ marginTop: 14, overflow: "hidden" }}>
       <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--line)" }}><strong style={{ fontSize: 13 }}>Realização por integrante · {progressRows.length}</strong></div>

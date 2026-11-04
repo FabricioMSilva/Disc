@@ -45,7 +45,7 @@ export async function addQuestionAction(input: {
   const requiresOptions = ["escala", "likert", "escolha_unica", "multipla_escolha"].includes(parsed.data.type);
   if (requiresOptions) {
     const labels = ["escala", "likert"].includes(parsed.data.type) && !parsed.data.options.trim()
-      ? ["Nunca", "Raramente", "Às vezes", "Frequentemente", "Sempre"]
+      ? ["Nunca me identifico", "Raramente me identifico", "Às vezes me identifico", "Frequentemente me identifico", "Sempre me identifico"]
       : parsed.data.options.split("\n").map((label) => label.trim()).filter(Boolean);
     if (labels.length < 2) return { error: "Informe pelo menos duas alternativas, uma por linha." };
     if (["escala", "likert"].includes(parsed.data.type) && labels.length !== 5) return { error: "Escalas precisam ter exatamente cinco alternativas." };

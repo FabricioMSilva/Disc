@@ -1,9 +1,59 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight, CircleCheck, Clock3, FileText } from "lucide-react";
 import { requireUser } from "@/lib/auth";
 
 export default async function ParticipantDashboard() {
   const { supabase, user, profile } = await requireUser();
+  if (profile?.role === "participant") {
+    const { data: assessments, error: assessmentsError } = await supabase
+      .from("assessments")
+      .select("id,status,cycle_id,concluida_em")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    if (assessmentsError) throw new Error(`Não foi possível carregar sua avaliação: ${assessmentsError.message}`);
+
+    const unfinished = assessments?.find((item) => item.status === "iniciada" || item.status === "em_andamento");
+    if (unfinished) redirect("/avaliacao");
+
+    const latestCompleted = (assessments ?? [])
+      .filter((item) => item.status === "concluida")
+      .sort((left, right) => new Date(right.concluida_em ?? 0).getTime() - new Date(left.concluida_em ?? 0).getTime())[0];
+    if (latestCompleted) redirect(`/resultados/${latestCompleted.id}`);
+
+    const now = new Date().toISOString();
+    const { data: cycle, error: cycleError } = await supabase
+      .from("assessment_cycles")
+      .select("id")
+      .eq("ativo", true)
+      .lte("data_inicio", now)
+      .or(`data_fim.is.null,data_fim.gte.${now}`)
+      .order("data_inicio", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (cycleError) throw new Error(`Não foi possível verificar avaliações disponíveis: ${cycleError.message}`);
+    if (!cycle) {
+      return <section className="surface participant-wait-card">
+        <p className="eyebrow">Sua avaliação</p>
+        <h1 className="page-title">Ainda não há uma avaliação disponível</h1>
+        <p className="page-subtitle">Quando uma nova avaliação for liberada para você, ela aparecerá aqui.</p>
+      </section>;
+    }
+
+    const { error: startError } = await supabase.rpc("start_assessment", { p_cycle_id: cycle.id });
+    if (!startError) redirect("/avaliacao");
+    const startMessage = startError.message.toLocaleLowerCase("pt-BR");
+    console.error("Automatic participant assessment start failed", { code: startError.code, message: startError.message });
+    const notice = startMessage.includes("inscrito")
+      ? "Esta avaliação ainda não foi atribuída à sua conta. Fale com seu gestor."
+      : "Não foi possível abrir a avaliação agora. Tente novamente ou fale com seu gestor.";
+    return <section className="surface participant-wait-card">
+      <p className="eyebrow">Sua avaliação</p>
+      <h1 className="page-title">Não foi possível iniciar</h1>
+      <p className="page-subtitle">{notice}</p>
+    </section>;
+  }
+
   const [{ data: assessments }, { data: cycles }] = await Promise.all([
     supabase.from("assessments").select("id,status,iniciada_em,concluida_em,cycle_id").eq("user_id", user.id).order("created_at", { ascending: false }),
     supabase.from("assessment_cycles").select("id,titulo,descricao,data_fim").eq("ativo", true).order("data_inicio", { ascending: false }),

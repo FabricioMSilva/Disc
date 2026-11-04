@@ -11,14 +11,15 @@ const roleLabel: Record<string, string> = {
 
 export function AppShell({ children, name, email, role }: { children: React.ReactNode; name: string; email: string; role: string }) {
   const initials = name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "PI";
+  const isParticipant = role === "participant";
   return (
-    <div className="shell">
-      <AppSidebar role={role} />
+    <div className={`shell${isParticipant ? " shell--participant" : ""}`}>
+      {!isParticipant && <AppSidebar role={role} />}
       <div className="workspace">
         <header className="topbar">
           <div className="topbar-start">
-            <MobileNavigation role={role} />
-            <div className="topbar-title">People Insights <span style={{ color: "#cbd5e1", padding: "0 7px" }}>/</span>{roleLabel[role] ?? "Workspace"}</div>
+            {!isParticipant && <MobileNavigation role={role} />}
+            {!isParticipant && <div className="topbar-title">People Insights <span style={{ color: "#cbd5e1", padding: "0 7px" }}>/</span>{roleLabel[role] ?? "Workspace"}</div>}
           </div>
           <div className="user-pill">
             <ThemeToggle />

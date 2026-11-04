@@ -55,6 +55,36 @@ No ambiente de teste, depois que os dois perfis existirem, `supabase/operations/
 
 ## Perfis e acesso
 
+A página Pessoas não exige convites: administradores e gestores acompanham
+integrantes e horários, enquanto a liberação e o vínculo à equipe ocorrem
+automaticamente no acesso. Os registros de convites existentes são preservados
+no banco, mas os formulários e listas de convites não aparecem nessa página.
+
+Execute `014_people_onboarding_summary.sql` para os indicadores de Admin >
+Pessoas: total de funcionários, senha cadastrada, avaliações em andamento e
+concluídas. O total reúne funcionários ativos do diretório (mesmo sem conta) e
+membros ativos de equipes que não constam no diretório, sem duplicar contas.
+O status considera a avaliação mais recente não cancelada. O RPC exige acesso
+administrativo e retorna somente contagens; nenhum hash de senha é exposto.
+
+Em Pessoas, o gráfico de perfis DISC conta somente o resultado da avaliação
+mais recente concluída de cada integrante cujo status atual é concluído.
+Resultados antigos e vínculos duplicados de equipe não somam novamente a pessoa.
+
+Após aplicar `012_link_directory_to_jossimar_team.sql`, execute
+`013_automatic_assessment_access.sql`. A 013 libera todos os perfis existentes e,
+em cada acesso autenticado, ativa a conta e inclui a pessoa na Equipe Jossimar.
+Isso não depende de `employee_directory.auth_user_id` já estar preenchido.
+Contas existentes em Supabase Auth sem registro em `profiles` recebem um perfil
+de participante automaticamente; perfis já existentes não têm seu papel alterado.
+O vínculo do diretório é reparado pelo e-mail quando possível. Os papéis existentes
+são preservados; não há promoção automática para gestor ou administrador.
+Inscrições em campanhas ativas que exigem atribuição também são preparadas no
+acesso, sem reiniciar avaliações, apagar respostas ou remover a espera de três
+meses. Nesta configuração, desativar apenas o perfil não bloqueia permanentemente
+a conta: o próximo acesso autenticado o ativa novamente. Para revogar o acesso,
+use os controles da conta no Supabase Auth.
+
 - `super_admin` e `admin`: administração de usuários, equipes, campanhas, questionários, resultados e auditoria.
 - `manager`: acesso às equipes atribuídas e aos fluxos de campanha permitidos.
 - `questionnaire_editor`: criação, edição e publicação de questionários.
@@ -70,7 +100,22 @@ Questionários são editados em rascunho e publicados como versões imutáveis. 
 
 O seed inclui as 40 questões da aba `Planilha1` e cinco perguntas reflexivas, além de uma campanha inicial. O cálculo mantém os totais por dimensão e aplica o índice ponderado definido na planilha: DISC 20%, Segurança 30%, Disciplina 20%, Trabalho em Equipe 20% e Comunicação 10%. As faixas DISC e de competências, assim como as recomendações por perfil, também seguem a aba `Planilha2`. A linha de respostas pessoais de exemplo da planilha não é importada. Reveja o conteúdo com RH e Segurança do Trabalho antes de uso operacional; as questões de exemplo não substituem instrumento validado ou orientação clínica.
 
+As perguntas Q1–Q40 e suas cinco alternativas comportamentais fixas ficam em
+`lib/assessment-question-content.ts`. A avaliação, revisão e listagem de respostas do
+relatório usam esse conteúdo, sem migração SQL. Cada alternativa continua salvando
+somente seu valor de 1 a 5 no modelo existente. A numeração interna determina o
+conteúdo, independentemente da ordem embaralhada; as categorias não são mostradas
+no questionário. Todas as 40 perguntas usam alternativas específicas da situação.
+Alterar esses textos não converte respostas já salvas: os valores numéricos
+existentes permanecem os mesmos.
+
 Após concluir, a pessoa é direcionada ao seu dashboard individual. Gestores e administradores podem abrir dashboards concluídos no escopo autorizado, consultar as respostas e usar a impressão do navegador para salvar em PDF ou baixar um CSV compatível com Excel.
+
+Em Admin > Resultados, os cartões apresentam a média dos totais por dimensão
+em pontos, com máximo de 25, e a média das respostas na escala de 1 a 5
+(média dos totais dividida por 5). As barras usam o limite de 25 pontos.
+São consideradas as avaliações concluídas entre os até 100 registros exibidos
+pelos filtros, não uma média de todo o histórico.
 
 ## Comandos
 

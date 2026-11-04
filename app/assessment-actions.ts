@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { getAssessmentQuestionText, getAssessmentQuestionResponses } from "@/lib/assessment-question-text";
 
 const scaleSchema = z.object({ assessmentId: z.string().uuid(), questionId: z.string().uuid(), score: z.number().int().min(1).max(5) });
 const textSchema = z.object({ assessmentId: z.string().uuid(), questionId: z.string().uuid(), answer: z.string().max(10000) });
@@ -10,12 +11,33 @@ const structuredSchema = z.object({ assessmentId: z.string().uuid(), questionId:
 
 export async function startAssessmentAction() {
   const { supabase, profile } = await requireUser();
-  if (profile?.status === "inactive" || profile?.ativo === false) return { error: "Conta inativa. Procure o administrador." };
-  const { data: cycle } = await supabase.from("assessment_cycles").select("id")
-    .eq("ativo", true).order("data_inicio", { ascending: false }).limit(1).maybeSingle();
+  if (profile?.status !== "active" || profile.ativo !== true) {
+    return { error: "Sua conta ainda não foi liberada para iniciar. Peça ao administrador para ativar seu acesso." };
+  }
+  const now = new Date().toISOString();
+  const { data: cycle, error: cycleError } = await supabase.from("assessment_cycles").select("id")
+    .eq("ativo", true).lte("data_inicio", now).or(`data_fim.is.null,data_fim.gte.${now}`)
+    .order("data_inicio", { ascending: false }).limit(1).maybeSingle();
+  if (cycleError) {
+    console.error("Could not load an available assessment cycle", { code: cycleError.code, message: cycleError.message });
+    return { error: "Não foi possível verificar se há uma avaliação disponível. Tente novamente ou fale com o administrador." };
+  }
   if (!cycle) return { error: "Não há uma avaliação disponível neste momento." };
   const { error } = await supabase.rpc("start_assessment", { p_cycle_id: cycle.id });
-  if (error) return { error: "Não foi possível iniciar. Verifique o ciclo com o administrador." };
+  if (error) {
+    const message = error.message.toLocaleLowerCase("pt-BR");
+    if (message.includes("conta ativa necessária")) {
+      return { error: "Sua conta ainda não foi liberada para iniciar. Peça ao administrador para ativar seu acesso." };
+    }
+    if (message.includes("ciclo indisponível")) {
+      return { error: "A avaliação ainda não está no período disponível. Fale com seu gestor." };
+    }
+    if (message.includes("poderá iniciar uma nova avaliação")) return { error: error.message };
+    if (message.includes("já foi concluída neste ciclo")) return { error: "Este ciclo já foi concluído. Aguarde uma nova avaliação." };
+    if (message.includes("não está inscrito")) return { error: "Esta avaliação não foi atribuída à sua conta. Fale com seu gestor." };
+    console.error("start_assessment RPC failed", { code: error.code, message: error.message });
+    return { error: "Não foi possível iniciar. Verifique se há uma avaliação disponível com seu gestor." };
+  }
   redirect("/avaliacao");
 }
 
@@ -119,7 +141,19 @@ export async function getAssessmentSnapshot() {
   const { data: selections } = answerIds.length
     ? await supabase.from("answer_option_selections").select("answer_id, option_id").in("answer_id", answerIds)
     : { data: [] };
-  return { assessment, questions: questions ?? [], themes: themes ?? [], answers: answers ?? [], textAnswers: textAnswers ?? [], options: options ?? [], selections: selections ?? [] };
+  return {
+    assessment,
+    questions: (questions ?? []).map((question) => ({
+      ...question,
+      texto: getAssessmentQuestionText(question),
+      responseLabels: getAssessmentQuestionResponses(question),
+    })),
+    themes: themes ?? [],
+    answers: answers ?? [],
+    textAnswers: textAnswers ?? [],
+    options: options ?? [],
+    selections: selections ?? [],
+  };
 }
 
 export async function confirmAndStartAction() {

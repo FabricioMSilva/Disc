@@ -2,17 +2,24 @@
 
 import { Check } from "lucide-react";
 
-const options = ["Nunca", "Raramente", "Às vezes", "Frequentemente", "Sempre"] as const;
+const options = [
+  "Nunca me identifico",
+  "Raramente me identifico",
+  "Às vezes me identifico",
+  "Frequentemente me identifico",
+  "Sempre me identifico",
+] as const;
 
-export function ScaleOptions({ questionId, value, onChange, disabled = false }: {
+export function ScaleOptions({ questionId, value, onChange, disabled = false, responseLabels }: {
   questionId: string;
   value?: number;
   onChange: (score: number) => void;
   disabled?: boolean;
+  responseLabels?: readonly string[];
 }) {
   return (
-    <div className="scale-options" role="radiogroup" aria-label="Frequência do comportamento">
-      {options.map((label, index) => {
+    <div className="scale-options" role="radiogroup" aria-label="Identificação com a situação">
+      {(responseLabels ?? options).map((label, index) => {
         const score = index + 1;
         return (
           <label key={label} className="scale-option">

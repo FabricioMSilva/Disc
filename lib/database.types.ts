@@ -32,6 +32,7 @@ export type Database = {
       admin_assessment_results: { Row: { assessment_id: string; cycle_id: string; user_id: string; participante: string; email: string; matricula: string | null; funcao: string | null; equipe: string | null; gestor: string | null; status: string; iniciada_em: string; concluida_em: string | null; dominancia: number | null; influencia: number | null; estabilidade: number | null; conformidade: number | null; seguranca: number | null; disciplina: number | null; trabalho_equipe: number | null; comunicacao: number | null; indice_competencias: number | null; perfil_predominante: string | null; resultado_ponderado: number | null; classificacao_competencias: string | null; faixas_disc: Json | null; recomendacao: string | null; total_score: number | null; dimensions: Json | null; dominant_dimension: string | null }; Relationships: [] };
     };
     Functions: {
+      people_onboarding_summary: { Args: Record<string, never>; Returns: Array<{ total_people: number; passwords_created: number; not_started: number; in_progress: number; completed: number }> };
       accept_current_user_invitation: { Args: Record<string, never>; Returns: undefined };
       is_admin: { Args: Record<string, never>; Returns: boolean };
       is_manager: { Args: Record<string, never>; Returns: boolean };
@@ -42,6 +43,8 @@ export type Database = {
       can_view_assessment: { Args: { p_assessment_id: string }; Returns: boolean };
       can_view_question: { Args: { p_question_id: string }; Returns: boolean };
       team_assessment_progress: { Args: { p_team_id: string | null }; Returns: Array<{ team_id: string; team_name: string; user_id: string; participant_name: string; matricula: string | null; funcao: string | null; assessment_id: string | null; status: string | null; answered_required: number; total_required: number; completion_percent: number; concluded_at: string | null }> };
+      team_member_work_schedules: { Args: { p_team_id: string | null }; Returns: Array<{ user_id: string; horario_trabalho: string | null }> };
+      set_team_member_work_schedule: { Args: { p_user_id: string; p_horario_trabalho: string | null }; Returns: undefined };
       add_team_member: { Args: { p_team_id: string; p_user_id: string }; Returns: string };
       can_manage_questionnaire: { Args: { p_questionnaire_id: string }; Returns: boolean };
       create_questionnaire: { Args: { p_title: string; p_description: string; p_slug: string; p_visibility: string }; Returns: string };

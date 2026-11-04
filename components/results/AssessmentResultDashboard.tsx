@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import type { loadAssessmentReport } from "@/lib/assessment-report";
 import { ResponseExportButtons } from "@/components/results/ResponseExportButtons";
+import { ParticipantRetakeCard } from "@/components/results/ParticipantRetakeCard";
+import { getAssessmentRetakeDate } from "@/lib/assessment-retake";
 
 type Report = NonNullable<Awaited<ReturnType<typeof loadAssessmentReport>>>;
 
@@ -30,8 +32,40 @@ function scoreRing(value: number) {
   return Math.max(0, Math.min(100, value)) / 100 * circumference;
 }
 
+const profileGuidance: Record<string, { approach: string; nextStep: string }> = {
+  D: {
+    approach: "Sua iniciativa ajuda a equipe a avançar. Antes de agir, alinhe prioridades e confira rapidamente os impactos para as pessoas envolvidas.",
+    nextStep: "Escolha uma situação desta semana para ouvir a equipe antes de definir o próximo passo.",
+  },
+  I: {
+    approach: "Sua comunicação pode aproximar as pessoas e dar energia ao grupo. Para transformar ideias em ação, combine responsáveis e próximos passos.",
+    nextStep: "Compartilhe uma ideia e feche a conversa com um acordo simples que todos entendam.",
+  },
+  S: {
+    approach: "Sua constância e cooperação ajudam a equipe a manter o equilíbrio. Sinalizar mudanças e necessidades com antecedência também fortalece esse apoio.",
+    nextStep: "Em uma mudança de rotina, compartilhe cedo o que pode ajudar a equipe a se adaptar.",
+  },
+  C: {
+    approach: "Seu cuidado com detalhes contribui para a qualidade. Definir o que precisa ser conferido primeiro ajuda a equilibrar precisão e agilidade.",
+    nextStep: "Antes de iniciar uma tarefa, identifique os pontos essenciais de conferência e revise-os ao concluir.",
+  },
+};
+
+const competencyGuidance: Record<string, string> = {
+  SEG: "Antes de começar, observe o ambiente e compartilhe qualquer risco percebido.",
+  DIS: "Use um lembrete simples para concluir rotinas e registros no momento combinado.",
+  TE: "Combine com alguém da equipe uma troca rápida de apoio ou de boas práticas.",
+  COM: "Ao repassar uma informação importante, confirme se a outra pessoa entendeu.",
+};
+
 export function AssessmentResultDashboard({ report }: { report: Report }) {
   const percentage = report.overall === null ? 0 : Math.max(0, Math.min(100, Math.round(report.overall)));
+  const participantView = report.viewerRole === "participant" && report.viewerIsOwner;
+  const nextRetakeAt = participantView ? getAssessmentRetakeDate(report.latestCompletedAt) : null;
+  const developmentCompetencies = report.competencies
+    .filter((item) => item.classification !== "Ponto consolidado")
+    .sort((left, right) => left.percentage - right.percentage)
+    .slice(0, 2);
   const categories = [
     { title: "Pontos consolidados", key: "Ponto consolidado" as const, icon: CheckCircle2 },
     { title: "Em desenvolvimento", key: "Em desenvolvimento" as const, icon: TrendingUp },
@@ -43,17 +77,17 @@ export function AssessmentResultDashboard({ report }: { report: Report }) {
   return <div className="assessment-report printable-report">
     <header className="assessment-report-header">
       <div className="assessment-report-heading">
-        <div className="assessment-complete-mark" aria-hidden="true"><CheckCircle2 size={26} /></div>
+        <div className={`assessment-complete-mark${participantView ? " is-animated" : ""}`} aria-hidden="true"><CheckCircle2 size={26} /></div>
         <div>
           <p className="eyebrow">Avaliação concluída</p>
           <h1 className="page-title">{report.viewerIsOwner ? "Seu resultado está pronto!" : `Resultado de ${report.participantName}`}</h1>
-          <p className="page-subtitle">Confira o perfil, as competências e as respostas registradas nesta avaliação.</p>
+          <p className="page-subtitle">{participantView ? "Confira seu perfil, seus pontos fortes e próximos passos de desenvolvimento." : "Confira o perfil, as competências e as respostas registradas nesta avaliação."}</p>
           <div className="report-identity">
             <div>
               <strong>{report.participantName}</strong>
               <span>{report.viewerIsOwner ? "Concluiu sua avaliação" : [report.teamName, report.roleName].filter(Boolean).join(" · ") || "Avaliação concluída"}</span>
             </div>
-            <ResponseExportButtons participantName={report.participantName} responses={report.responses} />
+            <ResponseExportButtons participantName={report.participantName} responses={report.responses} showSpreadsheet={!participantView} />
           </div>
         </div>
       </div>
@@ -99,7 +133,7 @@ export function AssessmentResultDashboard({ report }: { report: Report }) {
       <article className="surface report-card report-index-card">
         <p className="report-card-title">Índice geral de competências</p>
         <div className="report-index-content">
-          <div className="report-score-ring" role="img" aria-label={`Índice geral ${percentage} por cento`}>
+          <div className={`report-score-ring${participantView ? " is-animated" : ""}`} role="img" aria-label={`Índice geral ${percentage} por cento`}>
             <svg viewBox="0 0 110 110" aria-hidden="true">
               <circle cx="55" cy="55" r="45" className="report-ring-track" />
               <circle cx="55" cy="55" r="45" className="report-ring-value" strokeDasharray={`${scoreRing(percentage)} 283`} />
@@ -153,7 +187,33 @@ export function AssessmentResultDashboard({ report }: { report: Report }) {
       </section>
     </>}
 
-    <section className="surface report-responses-card">
+    {participantView && <section className="participant-guidance-grid" aria-label="Orientações para seu desenvolvimento">
+      <article className="surface participant-guidance-card">
+        <p className="eyebrow">Seu jeito de contribuir</p>
+        <h2>Use seus pontos fortes com intenção</h2>
+        {report.profile.codes.length ? report.profile.codes.map((code) => {
+          const guidance = profileGuidance[code];
+          return <div className="participant-guidance-item" key={code}>
+            <strong>{report.profile.name || `Perfil ${code}`}</strong>
+            <p>{guidance?.approach ?? report.profile.recommendation}</p>
+            <span>{guidance?.nextStep ?? "Escolha uma ação pequena para praticar nos próximos dias."}</span>
+          </div>;
+        }) : <p>{report.profile.recommendation}</p>}
+      </article>
+      <article className="surface participant-guidance-card participant-encouragement-card">
+        <p className="eyebrow">Um passo de cada vez</p>
+        <h2>Seu desenvolvimento continua</h2>
+        <p>Este resultado é um retrato do momento, não um rótulo. Mudanças pequenas e consistentes podem fortalecer sua rotina e a colaboração com a equipe.</p>
+        {developmentCompetencies.length ? <ul>
+          {developmentCompetencies.map((item) => <li key={item.code}>
+            <strong>{item.name}</strong>
+            <span>{competencyGuidance[item.code] ?? item.description}</span>
+          </li>)}
+        </ul> : <p className="participant-encouragement-note">Suas competências aparecem consolidadas. Continue praticando e compartilhando boas experiências.</p>}
+      </article>
+    </section>}
+
+    {!participantView && <section className="surface report-responses-card">
       <div className="report-section-heading">
         <div><p className="eyebrow">Registro da avaliação</p><h2>Respostas de {report.participantName}</h2></div>
         <BookOpen size={21} color="var(--blue)" />
@@ -162,11 +222,13 @@ export function AssessmentResultDashboard({ report }: { report: Report }) {
         <thead><tr><th>#</th><th>Seção</th><th>Pergunta</th><th>Resposta</th></tr></thead>
         <tbody>{report.responses.map((item) => <tr key={`${item.number}-${item.question}`}><td>{item.number}</td><td>{item.section}</td><td>{item.question}</td><td>{item.response}</td></tr>)}</tbody>
       </table></div> : <p className="empty-state">Não há respostas disponíveis para esta avaliação.</p>}
-    </section>
+    </section>}
 
-    <nav className="report-navigation no-print" aria-label="Navegação do resultado">
+    {participantView && nextRetakeAt && <ParticipantRetakeCard availableAt={nextRetakeAt} hasNewCycle={report.hasNewCycle} />}
+
+    {!participantView && <nav className="report-navigation no-print" aria-label="Navegação do resultado">
       <Link href={report.viewerIsOwner ? "/painel" : "/resultados"} className="button-secondary"><ArrowLeft size={15} /> Voltar</Link>
       {report.viewerIsOwner && <Link href="/historico" className="button-primary">Ver histórico <ArrowRight size={15} /></Link>}
-    </nav>
+    </nav>}
   </div>;
 }

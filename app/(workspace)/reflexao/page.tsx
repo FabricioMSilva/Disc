@@ -5,7 +5,7 @@ import { getAssessmentSnapshot } from "@/app/assessment-actions";
 export default async function ReflectionPage({ searchParams }: { searchParams: Promise<{ pergunta?: string }> }) {
   const [{ assessment, questions, answers, textAnswers }, params] = await Promise.all([getAssessmentSnapshot(), searchParams]);
   if (!assessment) redirect("/identificacao");
-  if (assessment.status === "concluida") redirect("/fim");
+  if (assessment.status === "concluida") redirect(`/resultados/${assessment.id}`);
   const scaleTotal = questions.filter((question) => question.tipo === "escala").length;
   const answeredScaleIds = new Set(answers.filter((answer) => answer.score !== null).map((answer) => answer.question_id));
   if (questions.some((question) => question.tipo === "escala" && question.obrigatoria && !answeredScaleIds.has(question.id))) redirect("/avaliacao");

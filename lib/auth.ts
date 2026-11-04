@@ -7,8 +7,16 @@ export async function requireUser() {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  await supabase.rpc("accept_current_user_invitation");
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  const { error: accessError } = await supabase.rpc("accept_current_user_invitation");
+  if (accessError) {
+    console.error("Could not prepare authenticated user access", { code: accessError.code, message: accessError.message });
+    throw new Error("Não foi possível preparar seu acesso à avaliação. Tente novamente ou informe o administrador.");
+  }
+  const { data: profile, error: profileError } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  if (profileError || !profile) {
+    console.error("Could not load authenticated user profile", { userId: user.id, code: profileError?.code, message: profileError?.message });
+    throw new Error("Não foi possível carregar o perfil da sua conta.");
+  }
   if (profile?.status === "inactive" || profile?.ativo === false) redirect("/acesso-negado");
   return { supabase, user, profile };
 }

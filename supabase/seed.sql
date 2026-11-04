@@ -17,46 +17,46 @@ on conflict (codigo) do update set nome = excluded.nome, descricao = excluded.de
   tipo = excluded.tipo, peso = excluded.peso, ativo = excluded.ativo;
 
 with seed_questions(numero, codigo, texto) as (values
-(1, 'D', 'Tomo iniciativa quando surge um problema operacional.'),
-(2, 'D', 'Consigo decidir rapidamente em situações críticas.'),
-(3, 'D', 'Gosto de assumir responsabilidades por resultados.'),
-(4, 'D', 'Sinto-me confortável liderando atividades da equipe.'),
-(5, 'D', 'Busco soluções mesmo quando não existem procedimentos claros.'),
-(6, 'I', 'Compartilho informações de forma espontânea com a equipe.'),
-(7, 'I', 'Tenho facilidade para me comunicar com diferentes pessoas.'),
-(8, 'I', 'Costumo motivar colegas durante atividades difíceis.'),
-(9, 'I', 'Gosto de participar de reuniões e discussões de melhorias.'),
-(10, 'I', 'Sou procurado pelos colegas para orientação ou apoio.'),
-(11, 'S', 'Mantenho a calma diante de situações de pressão.'),
-(12, 'S', 'Trabalho bem em equipe.'),
-(13, 'S', 'Respeito processos e rotinas estabelecidas.'),
-(14, 'S', 'Procuro evitar conflitos desnecessários.'),
-(15, 'S', 'Sou visto como uma pessoa confiável pela equipe.'),
-(16, 'C', 'Sigo procedimentos operacionais rigorosamente.'),
-(17, 'C', 'Tenho atenção aos detalhes das atividades.'),
-(18, 'C', 'Analiso riscos antes de executar uma tarefa.'),
-(19, 'C', 'Registro informações corretamente.'),
-(20, 'C', 'Preocupo-me com qualidade e conformidade dos serviços.'),
-(21, 'SEG', 'Utilizo corretamente todos os EPIs necessários.'),
-(22, 'SEG', 'Interrompo atividades quando identifico riscos.'),
-(23, 'SEG', 'Conheço os procedimentos de segurança da minha área.'),
-(24, 'SEG', 'Reporto desvios de segurança imediatamente.'),
-(25, 'SEG', 'Sou exemplo de comportamento seguro para a equipe.'),
-(26, 'DIS', 'Cumpro procedimentos sem realizar atalhos.'),
-(27, 'DIS', 'Mantenho registros atualizados.'),
-(28, 'DIS', 'Cumpro horários e rotinas estabelecidas.'),
-(29, 'DIS', 'Realizo inspeções conforme determinado.'),
-(30, 'DIS', 'Sigo padrões definidos para execução das atividades.'),
-(31, 'TE', 'Coopero com colegas quando necessário.'),
-(32, 'TE', 'Compartilho conhecimento e experiências.'),
-(33, 'TE', 'Contribuo para resolução de problemas coletivos.'),
-(34, 'TE', 'Respeito opiniões diferentes.'),
-(35, 'TE', 'Ajudo novos colaboradores na adaptação à área.'),
-(36, 'COM', 'Comunico desvios e anomalias rapidamente.'),
-(37, 'COM', 'Dou retorno quando recebo uma solicitação.'),
-(38, 'COM', 'Escuto atentamente antes de responder.'),
-(39, 'COM', 'Expresso ideias de maneira clara.'),
-(40, 'COM', 'Registro informações importantes adequadamente.')
+(1, 'D', 'Durante a troca de turno, surge um problema inesperado e ainda não está claro quem vai coordenar as primeiras ações.'),
+(2, 'D', 'Uma atividade importante está atrasada e o prazo começa a ficar comprometido.'),
+(3, 'D', 'Em uma conversa da equipe, há opiniões diferentes e ninguém propõe uma decisão.'),
+(4, 'D', 'Um problema recorrente volta a acontecer durante a rotina, e a equipe ainda não definiu como agir.'),
+(5, 'D', 'Você percebe uma oportunidade de melhoria, mas a equipe está acostumada ao método atual.'),
+(6, 'I', 'Um novo colega começa na equipe e demonstra insegurança sobre a rotina.'),
+(7, 'I', 'Durante uma conversa sobre melhorias, algumas pessoas participam pouco.'),
+(8, 'I', 'A equipe enfrenta uma tarefa difícil e o ânimo começa a cair.'),
+(9, 'I', 'Um colega compartilha uma forma mais prática de realizar uma atividade, que também pode ser útil para outras pessoas.'),
+(10, 'I', 'Um colega pede sua opinião sobre uma decisão que afeta a equipe.'),
+(11, 'S', 'Uma mudança de última hora altera a programação que a equipe havia combinado.'),
+(12, 'S', 'O ambiente fica pressionado porque várias demandas precisam ser resolvidas ao mesmo tempo.'),
+(13, 'S', 'Durante uma tarefa longa e repetitiva, o ritmo da equipe oscila.'),
+(14, 'S', 'Surge um desentendimento entre colegas sobre a divisão de uma tarefa.'),
+(15, 'S', 'A rotina muda pouco, mas exige atenção contínua ao longo do turno.'),
+(16, 'C', 'Você recebe uma orientação para uma atividade e percebe que um detalhe importante não ficou claro.'),
+(17, 'C', 'Uma atividade parece pronta para ser encerrada, mas ainda há um item de conferência pendente.'),
+(18, 'C', 'Durante uma atividade de rotina, você percebe uma forma mais rápida de concluir o trabalho, mas isso exige ignorar etapas que normalmente são realizadas.'),
+(19, 'C', 'Durante a passagem de turno, você nota que um registro está incompleto e que a próxima equipe pode depender dele.'),
+(20, 'C', 'A equipe precisa tomar uma decisão com informações ainda incompletas.'),
+(21, 'SEG', 'Você percebe uma condição que ainda não causou acidente, mas pode representar risco futuramente.'),
+(22, 'SEG', 'Um colega está prestes a iniciar uma atividade sem observar um possível risco ao redor.'),
+(23, 'SEG', 'Ao mudar de tarefa ou de área, você encontra uma situação diferente da esperada.'),
+(24, 'SEG', 'Uma atividade está perto do prazo, mas ainda falta uma verificação de segurança.'),
+(25, 'SEG', 'Depois de uma ocorrência sem consequências, a rotina tende a continuar normalmente.'),
+(26, 'DIS', 'Uma atividade simples e repetitiva precisa ser registrada ao final do turno.'),
+(27, 'DIS', 'A equipe combinou uma sequência de etapas, mas surge pressão para adiantar a próxima fase.'),
+(28, 'DIS', 'No fim do turno, você percebe que uma verificação de rotina ainda não foi registrada.'),
+(29, 'DIS', 'Uma inspeção recorrente não identificou problemas nas últimas vezes.'),
+(30, 'DIS', 'Durante o dia, interrupções e mudanças de prioridade deixam algumas rotinas pendentes.'),
+(31, 'TE', 'Você concluiu sua atividade e percebe que um colega ainda tem dificuldade para concluir a dele.'),
+(32, 'TE', 'Um colega encontra uma solução útil para uma dificuldade comum da equipe.'),
+(33, 'TE', 'A equipe precisa resolver um problema que afeta várias pessoas.'),
+(34, 'TE', 'Em uma discussão, um colega apresenta uma opinião diferente da maioria.'),
+(35, 'TE', 'Um novo integrante ainda está aprendendo a rotina da equipe e faz perguntas básicas.'),
+(36, 'COM', 'Na passagem de turno, há uma informação importante que pode alterar a prioridade da próxima equipe.'),
+(37, 'COM', 'Você percebe um desvio em uma atividade compartilhada por diferentes pessoas.'),
+(38, 'COM', 'Um colega explica uma preocupação que você não entendeu completamente.'),
+(39, 'COM', 'Você recebe um retorno de que uma orientação sua gerou dúvida.'),
+(40, 'COM', 'Ao registrar uma ocorrência ou mudança relevante, há pouco tempo para escrever.')
 )
 insert into public.questions (theme_id, numero, texto, tipo, ordem, obrigatoria, ativa)
 select t.id, q.numero, q.texto, 'escala', q.numero, true, true
@@ -134,11 +134,22 @@ insert into public.question_options (question_id, label, score, display_order)
 select q.id, option.label, option.score, option.display_order
 from public.questions q
 cross join (values
-  ('Nunca', 1, 1), ('Raramente', 2, 2), ('Às vezes', 3, 3),
-  ('Frequentemente', 4, 4), ('Sempre', 5, 5)
+  ('Nunca me identifico', 1, 1), ('Raramente me identifico', 2, 2), ('Às vezes me identifico', 3, 3),
+  ('Frequentemente me identifico', 4, 4), ('Sempre me identifico', 5, 5)
 ) as option(label, score, display_order)
 where q.tipo = 'escala'
 on conflict (question_id, display_order) do nothing;
+
+update public.question_options option
+set label = case option.display_order
+  when 1 then 'Nunca me identifico'
+  when 2 then 'Raramente me identifico'
+  when 3 then 'Às vezes me identifico'
+  when 4 then 'Frequentemente me identifico'
+  when 5 then 'Sempre me identifico'
+end
+from public.questions q
+where q.id = option.question_id and q.tipo = 'escala' and option.display_order between 1 and 5;
 
 update public.questionnaire_versions set status = 'published', published_at = coalesce(published_at, now())
 where version_number = 1 and questionnaire_id = (

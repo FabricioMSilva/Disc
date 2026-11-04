@@ -128,7 +128,7 @@ begin
     values (new_version_id, section_row.code, section_row.title, section_row.description, section_row.section_type, section_row.display_order, section_row.settings)
     returning id into new_section_id;
     for question_row in select q.* from public.questions q where q.section_id = section_row.id order by q.ordem loop
-      insert into public.questions(theme_id, section_id, numero, texto, tipo, ordem, obrigatoria, ativa, peso, dimension_code, settings)
+      insert into public.questions(theme_id, section_id, numero, texto, tipo, ordem, obrigatoria, ativa, weight, dimension_code, settings)
       values (question_row.theme_id, new_section_id, question_row.numero, question_row.texto, question_row.tipo, question_row.ordem,
         question_row.obrigatoria, question_row.ativa, question_row.weight, question_row.dimension_code, question_row.settings)
       returning id into new_question_id;
@@ -288,6 +288,7 @@ declare
   participant_uuid uuid;
   campaign_version_uuid uuid;
   campaign_row record;
+  latest_completed_at timestamptz;
 begin
   if auth.uid() is null or not exists (select 1 from public.profiles p where p.id = auth.uid() and p.status = 'active' and p.ativo) then
     raise exception 'Conta ativa necessária.' using errcode = '42501';
@@ -301,6 +302,31 @@ begin
       select cp.id into participant_uuid from public.campaign_participants cp
       where cp.campaign_id = campaign_row.id and cp.participant_id = auth.uid() and cp.status <> 'completed' for update;
       if participant_uuid is null then raise exception 'Você não está inscrito nesta campanha.' using errcode = '42501'; end if;
+    end if;
+  end if;
+  if not exists (
+    select 1 from public.assessments a
+    where a.user_id = auth.uid() and a.cycle_id = p_cycle_id
+      and a.status in ('iniciada', 'em_andamento')
+  ) then
+    if exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'participant') then
+      select max(a.concluida_em) into latest_completed_at
+      from public.assessments a
+      where a.user_id = auth.uid() and a.status = 'concluida';
+
+      if latest_completed_at > now() - interval '3 months' then
+        raise exception 'Você poderá iniciar uma nova avaliação em %.',
+          to_char(latest_completed_at + interval '3 months', 'DD/MM/YYYY')
+          using errcode = '22023';
+      end if;
+    end if;
+
+    if exists (
+      select 1 from public.assessments a
+      where a.user_id = auth.uid() and a.cycle_id = p_cycle_id and a.status = 'concluida'
+    ) then
+      raise exception 'Esta avaliação já foi concluída neste ciclo. Aguarde uma nova campanha.'
+        using errcode = '22023';
     end if;
   end if;
   insert into public.assessments(cycle_id, user_id, usuario_confirmado, campaign_participant_id, questionnaire_version_id)

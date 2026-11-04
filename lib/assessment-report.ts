@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import type { Json } from "@/lib/database.types";
+import { getAssessmentQuestionText, getAssessmentQuestionResponses } from "@/lib/assessment-question-text";
 
 const discFields = [
   { code: "D", resultField: "dominancia", themeCode: "D" },
@@ -61,6 +62,31 @@ export async function loadAssessmentReport(assessmentId: string) {
   if (resultError) throw new Error(`Não foi possível carregar o resultado: ${resultError.message}`);
   if (!result || (!canReviewTeam && result.user_id !== user.id)) return null;
 
+  let latestCompletedAt: string | null = null;
+  let hasNewCycle = false;
+  if (role === "participant" && result.user_id === user.id) {
+    const now = new Date().toISOString();
+    const [
+      { data: latestCompleted, error: latestCompletedError },
+      { data: activeCycle, error: activeCycleError },
+    ] = await Promise.all([
+      supabase.from("assessments").select("cycle_id,concluida_em")
+        .eq("user_id", user.id).eq("status", "concluida")
+        .not("concluida_em", "is", null)
+        .order("concluida_em", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("assessment_cycles").select("id")
+        .eq("ativo", true).lte("data_inicio", now)
+        .or(`data_fim.is.null,data_fim.gte.${now}`)
+        .order("data_inicio", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+
+    if (latestCompletedError) throw new Error(`Não foi possível verificar seu último resultado: ${latestCompletedError.message}`);
+    if (activeCycleError) throw new Error(`Não foi possível verificar novas avaliações: ${activeCycleError.message}`);
+
+    latestCompletedAt = latestCompleted?.concluida_em ?? result.concluida_em;
+    hasNewCycle = Boolean(activeCycle && latestCompleted && activeCycle.id !== latestCompleted.cycle_id);
+  }
+
   const [
     { data: catalog, error: catalogError },
     { data: themes, error: themesError },
@@ -121,7 +147,8 @@ export async function loadAssessmentReport(assessmentId: string) {
     const singleOption = answer?.selected_option_id ? optionById.get(answer.selected_option_id)?.label : null;
     const scoreOption = answer?.score === null || answer?.score === undefined
       ? null
-      : options?.find((option) => option.question_id === question.id && option.score === answer.score)?.label ?? null;
+      : getAssessmentQuestionResponses(question)?.[answer.score - 1]
+        ?? options?.find((option) => option.question_id === question.id && option.score === answer.score)?.label ?? null;
     const value = typeof text === "string" && text.trim()
       ? text.trim()
       : selectedLabels.length
@@ -138,7 +165,7 @@ export async function loadAssessmentReport(assessmentId: string) {
     return {
       number: question.numero,
       section: question.theme_id ? themeById.get(question.theme_id)?.nome ?? "Questionário" : "Reflexão",
-      question: question.texto,
+      question: getAssessmentQuestionText(question),
       response: value,
     };
   });
@@ -194,6 +221,9 @@ export async function loadAssessmentReport(assessmentId: string) {
   return {
     assessmentId,
     viewerIsOwner: result.user_id === user.id,
+    viewerRole: role,
+    latestCompletedAt,
+    hasNewCycle,
     participantName: result.participante,
     teamName: result.equipe,
     roleName: result.funcao,

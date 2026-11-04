@@ -9,20 +9,30 @@ import { saveScaleAnswerAction } from "@/app/assessment-actions";
 import { QuestionProgress } from "@/components/assessment/QuestionProgress";
 import { QuestionSpeech, speakQuestion } from "@/components/assessment/QuestionSpeech";
 import { ScaleOptions } from "@/components/assessment/ScaleOptions";
+import { shuffleForAssessment } from "@/lib/assessment-order";
 
-type ThemeView = { id: string; codigo: string; nome: string; descricao: string; ordem: number };
 type SavedAnswer = { question_id: string; score: number | null };
+type ScaleQuestion = { id: string; texto: string; ordem: number; obrigatoria: boolean; responseLabels?: readonly string[] };
 
-export function QuestionFlow({ assessmentId, questions, themes, answers, startQuestionId, nextPath, nextQuestion }: {
-  assessmentId: string; questions: Question[]; themes: ThemeView[]; answers: SavedAnswer[]; startQuestionId?: string; nextPath: string;
-  nextQuestion?: Question;
+export function QuestionFlow({ assessmentId, questions, answers, startQuestionId, nextPath, nextQuestion }: {
+  assessmentId: string; questions: ScaleQuestion[]; answers: SavedAnswer[]; startQuestionId?: string; nextPath: string;
+  nextQuestion?: Pick<Question, "id" | "texto">;
 }) {
   const router = useRouter();
-  const scaleQuestions = useMemo(() => questions.filter((question) => question.tipo === "escala"), [questions]);
-  const startIndex = Math.max(0, scaleQuestions.findIndex((question) => question.id === startQuestionId));
+  const scaleQuestions = useMemo(
+    () => shuffleForAssessment(questions, assessmentId),
+    [assessmentId, questions],
+  );
+  const requestedIndex = scaleQuestions.findIndex((question) => question.id === startQuestionId);
+  const answeredIds = new Set(answers.filter((answer) => answer.score !== null).map((answer) => answer.question_id));
+  const firstUnansweredIndex = scaleQuestions.findIndex(
+    (question) => question.obrigatoria && !answeredIds.has(question.id),
+  );
+  const startIndex = startQuestionId && requestedIndex >= 0
+    ? requestedIndex
+    : Math.max(0, firstUnansweredIndex);
   const [index, setIndex] = useState(startIndex);
   const [saved, setSaved] = useState(() => Object.fromEntries(answers.flatMap((answer) => answer.score === null ? [] : [[answer.question_id, answer.score]])) as Record<string, number>);
-  const [seenThemes, setSeenThemes] = useState<Set<string>>(() => new Set(scaleQuestions.slice(0, startIndex).map((question) => question.theme_id ?? "")));
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [savingQuestionId, setSavingQuestionId] = useState<string | null>(null);
@@ -31,8 +41,6 @@ export function QuestionFlow({ assessmentId, questions, themes, answers, startQu
   const [pending, startTransition] = useTransition();
   const current = scaleQuestions[index];
   const canContinue = current ? !current.obrigatoria || Boolean(saved[current.id]) : false;
-  const theme = themes.find((item) => item.id === current?.theme_id);
-  const isThemeIntro = Boolean(theme && !seenThemes.has(theme.id) && scaleQuestions.findIndex((question) => question.theme_id === theme.id) === index);
   if (!current) return <div className="surface empty-state">Não há perguntas pontuadas disponíveis neste questionário.</div>;
   const advanceFrom = (questionId: string) => {
     const questionIndex = scaleQuestions.findIndex((question) => question.id === questionId);
@@ -41,8 +49,6 @@ export function QuestionFlow({ assessmentId, questions, themes, answers, startQu
       router.push(nextPath);
       return;
     }
-    const answeredThemeId = scaleQuestions[questionIndex].theme_id;
-    if (answeredThemeId) setSeenThemes((state) => new Set(state).add(answeredThemeId));
     setIndex(questionIndex + 1);
     setError("");
     setStatus("");
@@ -92,9 +98,7 @@ export function QuestionFlow({ assessmentId, questions, themes, answers, startQu
       if (nextQuestion) speakQuestion(nextQuestion.id, nextQuestion.texto);
     } else {
       const upcomingQuestion = scaleQuestions[index + 1];
-      const nextTheme = themes.find((item) => item.id === upcomingQuestion.theme_id);
-      const startsNewTheme = Boolean(nextTheme && !seenThemes.has(nextTheme.id) && scaleQuestions.findIndex((question) => question.theme_id === nextTheme.id) === index + 1);
-      if (!startsNewTheme) speakQuestion(upcomingQuestion.id, upcomingQuestion.texto);
+      speakQuestion(upcomingQuestion.id, upcomingQuestion.texto);
     }
     if (savingQuestionId === current.id) {
       advanceAfterSave.current = current.id;
@@ -108,25 +112,14 @@ export function QuestionFlow({ assessmentId, questions, themes, answers, startQu
   return (
     <div className="question-flow">
       <QuestionProgress label="Comportamentos e competências" current={index + 1} total={scaleQuestions.length} ariaLabel="Progresso da avaliação" />
-      <motion.section key={isThemeIntro ? `intro-${theme?.id}` : current.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .18 }} className={`surface question-card${isThemeIntro ? " theme-intro-card" : ""}`}>
-        {isThemeIntro ? <>
-          <p className="eyebrow">Tema {theme?.ordem}</p>
-          <h2 className="theme-intro-title">{theme?.nome}</h2>
-          <p className="theme-intro-description">{theme?.descricao}</p>
-          <button type="button" className="button-primary theme-intro-action" onClick={() => {
-            speakQuestion(current.id, current.texto);
-            setSeenThemes((state) => new Set(state).add(theme?.id ?? ""));
-          }}>Começar tema <ArrowRight size={16} /></button>
-        </> : <>
-          <div className="question-category"><span className="question-category-dot" aria-hidden="true" />{theme?.nome ?? "Pergunta"}</div>
-          <h2 className="question-text">{current.texto}</h2>
-          <QuestionSpeech questionId={current.id} text={current.texto} />
-          <p className="question-helper">Selecione a alternativa que melhor representa sua resposta.</p>
-          <ScaleOptions questionId={current.id} value={saved[current.id]} onChange={handleAnswer} disabled={pending} />
-          <div className={`question-feedback${error ? " is-error" : ""}`} aria-live="polite">{error || (status && <><Save size={13} />{status}</>)}</div>
-        </>}
+      <motion.section key={current.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .18 }} className="surface question-card">
+        <h2 className="question-text">{current.texto}</h2>
+        <QuestionSpeech questionId={current.id} text={current.texto} />
+        <p className="question-helper">{current.responseLabels ? "Escolha a resposta que melhor descreve como você costuma agir nessa situação." : "Indique o quanto você se identifica com a situação apresentada."}</p>
+        <ScaleOptions questionId={current.id} value={saved[current.id]} onChange={handleAnswer} disabled={pending} responseLabels={current.responseLabels} />
+        <div className={`question-feedback${error ? " is-error" : ""}`} aria-live="polite">{error || (status && <><Save size={13} />{status}</>)}</div>
       </motion.section>
-      {!isThemeIntro && <div className="question-navigation">
+      <div className="question-navigation">
         <button type="button" className="button-secondary" disabled={index === 0 || pending || advancePending} onClick={() => {
           const previousQuestion = scaleQuestions[index - 1];
           if (previousQuestion) speakQuestion(previousQuestion.id, previousQuestion.texto);
@@ -135,7 +128,7 @@ export function QuestionFlow({ assessmentId, questions, themes, answers, startQu
           setStatus("");
         }}><ArrowLeft size={15} /> Voltar</button>
         <button type="button" className="button-primary" disabled={!canContinue || advancePending} onClick={next}>{advancePending ? "Salvando..." : index === scaleQuestions.length - 1 ? "Continuar" : "Próxima pergunta"} {!advancePending && (index === scaleQuestions.length - 1 ? <Check size={15} /> : <ArrowRight size={15} />)}</button>
-      </div>}
+      </div>
       <p className="question-disclaimer">Responda considerando seu comportamento real. Não há respostas certas ou erradas.</p>
     </div>
   );

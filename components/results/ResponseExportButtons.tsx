@@ -16,7 +16,15 @@ function fileSlug(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-export function ResponseExportButtons({ participantName, responses }: { participantName: string; responses: ReportResponse[] }) {
+export function ResponseExportButtons({
+  participantName,
+  responses,
+  showSpreadsheet = true,
+}: {
+  participantName: string;
+  responses: ReportResponse[];
+  showSpreadsheet?: boolean;
+}) {
   function downloadCsv() {
     const rows = [
       ["Número", "Seção", "Pergunta", "Resposta"],
@@ -37,8 +45,8 @@ export function ResponseExportButtons({ participantName, responses }: { particip
     <button type="button" className="button-secondary" onClick={() => window.print()} aria-label="Salvar respostas em PDF">
       <Printer size={15} /> Salvar PDF
     </button>
-    <button type="button" className="button-secondary" onClick={downloadCsv} aria-label="Baixar respostas para abrir no Excel">
+    {showSpreadsheet && <button type="button" className="button-secondary" onClick={downloadCsv} aria-label="Baixar respostas para abrir no Excel">
       <FileSpreadsheet size={15} /> Excel (.csv) <Download size={14} />
-    </button>
+    </button>}
   </div>;
 }

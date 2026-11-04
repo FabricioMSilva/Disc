@@ -7,7 +7,7 @@ export default async function StructuredQuestionsPage({ searchParams }: { search
   const snapshot = await getAssessmentSnapshot();
   const { assessment, questions, options, answers, selections } = snapshot;
   if (!assessment) redirect("/identificacao");
-  if (assessment.status === "concluida") redirect("/fim");
+  if (assessment.status === "concluida") redirect(`/resultados/${assessment.id}`);
   const scaleQuestions = questions.filter((question) => question.tipo === "escala");
   const answeredScaleIds = new Set(answers.filter((answer) => answer.score !== null).map((answer) => answer.question_id));
   if (scaleQuestions.some((question) => question.obrigatoria && !answeredScaleIds.has(question.id))) redirect("/avaliacao");

@@ -4,17 +4,16 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, CircleCheck } from "lucide-react";
-import type { Question } from "@/lib/database.types";
 import { completeAssessmentAction } from "@/app/assessment-actions";
+import { shuffleForAssessment } from "@/lib/assessment-order";
 
-type ThemeView = { id: string; nome: string; ordem: number };
-type ScaleAnswer = { question_id: string; score: number | null };
+type ReviewQuestion = { id: string; texto: string; tipo: string; responseLabels?: readonly string[] };
 type TextAnswer = { question_id: string; answer_text: string };
 type StructuredAnswer = { id: string; question_id: string; score: number | null; selected_option_id: string | null; numeric_value: number | null; boolean_value: boolean | null; date_value: string | null };
 type Option = { id: string; question_id: string; label: string; score: number | null; display_order: number };
 
-export function ReviewPanel({ assessmentId, questions, themes, answers, textAnswers, options, selections }: {
-  assessmentId: string; questions: Question[]; themes: ThemeView[]; answers: StructuredAnswer[]; textAnswers: TextAnswer[];
+export function ReviewPanel({ assessmentId, questions, answers, textAnswers, options, selections }: {
+  assessmentId: string; questions: ReviewQuestion[]; answers: StructuredAnswer[]; textAnswers: TextAnswer[];
   options: Option[]; selections: { answer_id: string; option_id: string }[];
 }) {
   const [error, setError] = useState("");
@@ -23,6 +22,10 @@ export function ReviewPanel({ assessmentId, questions, themes, answers, textAnsw
   const answerScores = new Map(answers.map((answer) => [answer.question_id, answer.score]));
   const answerByQuestion = new Map(answers.map((answer) => [answer.question_id, answer]));
   const reflections = new Map(textAnswers.map((answer) => [answer.question_id, answer.answer_text]));
+  const scaleQuestions = shuffleForAssessment(
+    questions.filter((question) => question.tipo === "escala"),
+    assessmentId,
+  );
   const submit = () => {
     if (!window.confirm("Enviar sua avaliação? Depois do envio, as respostas não poderão ser alteradas.")) return;
     setError("");
@@ -31,7 +34,7 @@ export function ReviewPanel({ assessmentId, questions, themes, answers, textAnsw
       if (result?.error) setError(result.error); else router.push("/fim");
     });
   };
-  const labels = ["", "Nunca", "Raramente", "Às vezes", "Frequentemente", "Sempre"];
+  const labels = ["", "Nunca me identifico", "Raramente me identifico", "Às vezes me identifico", "Frequentemente me identifico", "Sempre me identifico"];
 
   return <div style={{ maxWidth: 920, margin: "26px auto 0" }}>
     {pending && <div className="assessment-submit-overlay" role="status" aria-live="polite" aria-busy="true">
@@ -42,24 +45,11 @@ export function ReviewPanel({ assessmentId, questions, themes, answers, textAnsw
         <p>Estamos salvando suas respostas. Você será levado ao seu dashboard assim que o envio terminar.</p>
       </section>
     </div>}
-    {themes.map((theme) => {
-      const sectionQuestions = questions.filter((question) => question.theme_id === theme.id).sort((a, b) => a.ordem - b.ordem);
-      return <section key={theme.id} className="surface" style={{ marginBottom: 14, overflow: "hidden" }}>
-        <div style={{ padding: "15px 19px", borderBottom: "1px solid var(--line)", display: "flex", justifyContent: "space-between", alignItems: "center" }}><strong>{theme.nome}</strong><span className="status">{sectionQuestions.filter((question) => answerScores.has(question.id)).length}/{sectionQuestions.length} respondidas</span></div>
-        {sectionQuestions.map((question) => {
-          const score = answerScores.get(question.id);
-          return <div key={question.id} className="review-answer-row" style={{ borderBottom: "1px solid #edf1f6" }}>
-            <div style={{ fontSize: 12, lineHeight: 1.5 }}>{question.texto}<div className="muted" style={{ marginTop: 3 }}>{score ? labels[score] : "Sem resposta"}</div></div>
-            <Link className="button-secondary" href={`/avaliacao?pergunta=${question.id}`} style={{ minHeight: 34, fontSize: 11 }}>Revisar</Link>
-          </div>;
-        })}
-      </section>;
-    })}
-    {questions.some((question) => question.tipo === "escala" && !question.theme_id) && <section className="surface" style={{ marginBottom: 18, overflow: "hidden" }}>
-      <div style={{ padding: "15px 19px", borderBottom: "1px solid var(--line)" }}><strong>Perguntas de escala</strong></div>
-      {questions.filter((question) => question.tipo === "escala" && !question.theme_id).map((question) => {
+    {scaleQuestions.length > 0 && <section className="surface" style={{ marginBottom: 18, overflow: "hidden" }}>
+      {scaleQuestions.map((question) => {
         const score = answerScores.get(question.id);
-        return <div key={question.id} className="review-answer-row" style={{ borderBottom: "1px solid #edf1f6" }}><div style={{ fontSize: 12, lineHeight: 1.5 }}>{question.texto}<div className="muted" style={{ marginTop: 3 }}>{score ? labels[score] : "Sem resposta"}</div></div><Link className="button-secondary" href={`/avaliacao?pergunta=${question.id}`} style={{ minHeight: 34, fontSize: 11 }}>Revisar</Link></div>;
+        const answerLabel = score ? question.responseLabels?.[score - 1] ?? labels[score] : "Sem resposta";
+        return <div key={question.id} className="review-answer-row" style={{ borderBottom: "1px solid #edf1f6" }}><div style={{ fontSize: 12, lineHeight: 1.5 }}>{question.texto}<div className="muted" style={{ marginTop: 3 }}>{answerLabel}</div></div><Link className="button-secondary" href={`/avaliacao?pergunta=${question.id}`} style={{ minHeight: 34, fontSize: 11 }}>Revisar</Link></div>;
       })}
     </section>}
     {questions.some((question) => !["escala", "texto"].includes(question.tipo)) && <section className="surface" style={{ marginBottom: 18, overflow: "hidden" }}>
