@@ -22,13 +22,20 @@ const categoryColors = {
   "Prioridade sugerida": { color: "#B77900", background: "#FFF7D9" },
 };
 
+const competencyColors: Record<string, string> = {
+  SEG: "#0A9F68",
+  DIS: "#E3A51A",
+  TE: "#3D85E6",
+  COM: "#E35D63",
+};
+
 function displayDate(value: string | null) {
   if (!value) return "Data indisponível";
   return new Date(value).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
 }
 
-function scoreRing(value: number) {
-  const circumference = 2 * Math.PI * 45;
+function scoreRing(value: number, radius: number) {
+  const circumference = 2 * Math.PI * radius;
   return Math.max(0, Math.min(100, value)) / 100 * circumference;
 }
 
@@ -130,34 +137,50 @@ export function AssessmentResultDashboard({ report }: { report: Report }) {
         ))}</div>}
       </article>
 
-      <article className="surface report-card report-index-card">
-        <p className="report-card-title">Índice geral de competências</p>
-        <div className="report-index-content">
-          <div className={`report-score-ring${participantView ? " is-animated" : ""}`} role="img" aria-label={`Índice geral ${percentage} por cento`}>
-            <svg viewBox="0 0 110 110" aria-hidden="true">
-              <circle cx="55" cy="55" r="45" className="report-ring-track" />
-              <circle cx="55" cy="55" r="45" className="report-ring-value" strokeDasharray={`${scoreRing(percentage)} 283`} />
-            </svg>
-            <div><strong>{report.overall === null ? "—" : `${percentage}%`}</strong><span>{report.classification ?? "Resultado"}</span></div>
-          </div>
-          <div className="report-index-copy">
-            <p>Resultado calculado a partir das competências respondidas, conforme os critérios da avaliação.</p>
-            {report.weightedScore !== null && <div className="report-weighted-score"><span>Índice ponderado</span><strong>{Number(report.weightedScore).toFixed(1)}%</strong></div>}
-          </div>
-        </div>
-      </article>
     </section>
 
     {report.competencies.length > 0 && <>
       <section className="report-section">
         <div className="report-section-heading"><div><p className="eyebrow">Resultado individual</p><h2>Competências operacionais</h2></div><ClipboardCheck size={21} color="var(--blue)" /></div>
+        <article className="surface report-card report-index-card report-competency-overview">
+          <p className="report-card-title">Índice geral de competências</p>
+          <div className="report-index-content">
+            <div className={`report-score-ring report-competency-rings${participantView ? " is-animated" : ""}`} role="img" aria-label={`Índice geral ${percentage} por cento. ${report.competencies.map((item) => `${item.name}: ${item.percentage}%`).join(". ")}`}>
+              <svg viewBox="0 0 180 180" aria-hidden="true">
+                {report.competencies.map((item, index) => {
+                  const radius = 77 - index * 14;
+                  const circumference = 2 * Math.PI * radius;
+                  const color = competencyColors[item.code] ?? "#64748B";
+                  return <g key={item.code}>
+                    <circle cx="90" cy="90" r={radius} className="report-ring-track" />
+                    <circle cx="90" cy="90" r={radius} className="report-ring-value" style={{ stroke: color }} strokeDasharray={`${scoreRing(item.percentage, radius)} ${circumference}`} />
+                  </g>;
+                })}
+              </svg>
+              <div><strong>{report.overall === null ? "—" : `${percentage}%`}</strong><span>{report.classification ?? "Índice geral"}</span></div>
+            </div>
+            <div className="report-index-copy">
+              <p>Índice calculado a partir das competências operacionais respondidas.</p>
+              <div className="report-competency-legend">{report.competencies.map((item) => {
+                const color = competencyColors[item.code] ?? "#64748B";
+                return <div className="report-competency-legend-item" key={item.code}>
+                  <span className="report-competency-swatch" style={{ background: color }} />
+                  <span className="report-competency-legend-name">{item.name}</span>
+                  <strong>{item.percentage}%</strong>
+                </div>;
+              })}</div>
+              {report.weightedScore !== null && <div className="report-weighted-score"><span>Índice ponderado</span><strong>{Number(report.weightedScore).toFixed(1)}%</strong></div>}
+            </div>
+          </div>
+        </article>
         <div className="report-competency-grid">{report.competencies.map((item) => {
           const colors = categoryColors[item.classification];
+          const competencyColor = competencyColors[item.code] ?? "#64748B";
           return <article className="surface report-competency-card" key={item.code}>
-            <div className="report-competency-top"><span className="report-competency-icon"><Target size={17} /></span><span className="report-competency-score">{item.percentage}%</span></div>
+            <div className="report-competency-top"><span className="report-competency-icon" style={{ color: competencyColor, background: `${competencyColor}1A` }}><Target size={17} /></span><span className="report-competency-score">{item.percentage}%</span></div>
             <h3>{item.name}</h3>
             <div className="report-progress-track report-competency-track" role="progressbar" aria-label={`${item.name}: ${item.percentage}%`} aria-valuenow={item.percentage} aria-valuemin={0} aria-valuemax={100}>
-              <span style={{ width: `${item.percentage}%`, background: "var(--blue)" }} />
+              <span style={{ width: `${item.percentage}%`, background: competencyColor }} />
             </div>
             <p>{item.description}</p>
             <span className="report-classification" style={{ color: colors.color, background: colors.background }}>{item.classification}</span>

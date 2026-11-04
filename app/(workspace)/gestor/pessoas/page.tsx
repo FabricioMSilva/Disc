@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireTeamManager } from "@/lib/auth";
 import { DashboardCharts } from "@/components/admin/DashboardCharts";
 import { WorkScheduleEditor } from "@/components/people/WorkScheduleEditor";
+import { InvitationForm } from "@/components/people/InvitationForm";
 import { PersonalAssessmentCard } from "@/components/assessment/PersonalAssessmentCard";
 
 export default async function ManagerPeoplePage() {
@@ -83,6 +84,7 @@ export default async function ManagerPeoplePage() {
   return <>
     <p className="eyebrow">Pessoas</p><h1 className="page-title">Pessoas da equipe</h1>
     <p className="page-subtitle">Acompanhamento de participação, resultados e comparação por horário de trabalho.</p>
+    <InvitationForm teams={(teams ?? []).map(({ id, name }) => ({ id, name }))} manager={profile.role === "manager"} />
     <PersonalAssessmentCard supabase={supabase} userId={user.id} />
     <div className="kpi-grid">{metrics.map((metric) => <article key={metric.label} className="surface kpi"><span className="kpi-label">{metric.label}</span><p className="kpi-value">{metric.value}</p></article>)}</div>
     <DashboardCharts completedProfiles byTeam={teamChart} discProfiles={discChart} bySchedule={bySchedule} scheduleComparison={scheduleComparison} />
